@@ -1,0 +1,30 @@
+TARJETAS DE PRUEBA OFICIALES DE REDSYS (ENTORNO SANDBOX)
+=========================================================
+
+Para realizar pruebas en el entorno de desarrollo (Sandbox) de Redsys, debes utilizar números de tarjeta específicos. No utilices tarjetas reales.
+
+1. PAGO EXITOSO (OPERACIÓN AUTORIZADA)
+---------------------------------------
+Usa esta tarjeta para simular que el cliente ha pagado correctamente y el banco ha aceptado el cobro.
+• Tarjeta: 4548810000000003
+• Caducidad: Cualquier fecha futura (ej. 12/28)
+• CVV: 123
+
+2. PAGO DENEGADO (FALTA DE FONDOS / TARJETA RECHAZADA)
+------------------------------------------------------
+Usa esta tarjeta para comprobar que tu página captura correctamente cuando un usuario tiene la tarjeta bloqueada o sin saldo, y le redirige a tu pantalla de error.
+• Tarjeta: 4548 8100 0000 0004
+• Caducidad: Cualquier fecha futura (ej. 12/28)
+• CVV: 123
+
+3. ERROR DE AUTENTICACIÓN (3D SECURE FALLIDO)
+---------------------------------------------
+Simula que el cliente intentó pagar pero no completó correctamente el código SMS que le llega al móvil.
+• Tarjeta: 4548 8100 0000 0001
+• Caducidad: Cualquier fecha futura
+• CVV: 123
+
+=========================================================
+Nota Importante:
+Recuerda que estas tarjetas SOLAMENTE funcionan cuando el TPV Virtual y tus credenciales apuntan al entorno de Pruebas (https://sis-t.redsys.es).
+En cuanto actives el entorno de Producción (https://sis.redsys.es), este documento ya no servirá y cualquier pago fallará si insertas estos números.

@@ -1,0 +1,29 @@
+query ListAllProducts @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  breakfastItems {
+    id
+    name
+    description
+    price
+    imageUrl
+  }
+}
+
+query GetProductById($id: UUID!) @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  breakfastItem(id: $id) {
+    id
+    name
+    description
+    price
+    imageUrl
+  }
+}
+
+query ListAllPackages @auth(level: PUBLIC) {
+  breakfastPackages {
+    id
+    name
+    description
+    price
+    imageUrl
+  }
+}

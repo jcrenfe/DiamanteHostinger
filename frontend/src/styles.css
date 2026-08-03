@@ -1,0 +1,274 @@
+/* Design System - "Diamante" 
+   Warmth, tradition, and family values.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+:root {
+  /* Colors - Warm Palette */
+  --primary: #8B4513;
+  /* Saddle Brown - Tradition */
+  --primary-light: #A0522D;
+  --secondary: #E67E22;
+  /* Warm Orange - Energy/Home */
+  --accent: #C0392B;
+  /* Elegant Red */
+  --background: #FDF8F0;
+  /* Cream/Off-white - Clean & Warm */
+  --text-dark: #1D1C1B;
+  /* Soft Black */
+  --text-muted: #5D4037;
+  /* Brownish Grey */
+  --surface: #FFFFFF;
+  --success: #27AE60;
+
+  /* Fonts */
+  --font-title: 'Playfair Display', serif;
+  --font-body: 'Montserrat', sans-serif;
+
+  /* Layout */
+  --header-height: 97px;
+  --container-width: 1200px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* Transitions */
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+@media (max-width: 850px) {
+  :root {
+    --header-height: 75px;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--background);
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+/* Solo el contenido principal limita el overflow horizontal, no el header sticky */
+.main-content {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+.title-font {
+  font-family: var(--font-title);
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2.2rem;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition-smooth);
+}
+
+ul {
+  list-style: none;
+}
+
+button,
+.btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  padding: 0.8rem 2rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition-smooth);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* Base Layout Utility — un único padding fluido para TODOS los anchos */
+.container {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  /* clamp(mínimo, ideal, máximo): siempre hay margen lateral garantizado */
+  padding-left: clamp(1.5rem, 4vw, 3rem);
+  padding-right: clamp(1.5rem, 4vw, 3rem);
+}
+
+.section-padding {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  /* NO padding lateral: el .container lo gestiona con clamp() */
+}
+
+/* Utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.mt-4 {
+  margin-top: 1.5rem;
+}
+
+.mb-5 {
+  margin-bottom: 3rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* Lazy Loading style */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Ensure smooth emergence without hiding by default */
+img[loading="lazy"] {
+  transition: opacity 0.3s ease-in;
+}
+
+/* Accessibility Implementation */
+
+/* 1. Font Size Levels */
+body.font-size-1 {
+  font-size: 1.25rem;
+}
+
+body.font-size-2 {
+  font-size: 1.6rem;
+}
+
+body.font-size-3 {
+  font-size: 2rem;
+}
+
+/* 2. High Contrast */
+body.high-contrast {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+body.high-contrast :not(button):not(a) {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+body.high-contrast a,
+body.high-contrast button {
+  background-color: #ff0 !important;
+  color: #000 !important;
+  border: 2px solid #fff !important;
+}
+
+/* 3. Grayscale (Excluding Accessibility Menu by targeting main-content) */
+body.grayscale .main-content {
+  filter: grayscale(100%) !important;
+}
+
+/* 4. Highlight Links */
+body.highlight-links a {
+  background-color: #ffff00 !important;
+  color: #000 !important;
+  text-decoration: underline !important;
+  font-weight: bold !important;
+  padding: 2px !important;
+}
+
+/* 5. Dark Mode (Internal logic) */
+body.dark-mode {
+  --background: #121212;
+  --surface: #1e1e1e;
+  --text-dark: #e0e0e0;
+  --text-muted: #b0b0b0;
+  --primary: #d2a679;
+  /* Lighter brown for dark mode */
+  --primary-light: #e5c9a9;
+  background-color: var(--background);
+  color: var(--text-dark);
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4 {
+  color: var(--primary);
+}
+
+body.dark-mode .card-container {
+  background-color: var(--surface);
+  border-color: #333;
+}
+
+body.dark-mode .header {
+  background-color: var(--surface);
+}

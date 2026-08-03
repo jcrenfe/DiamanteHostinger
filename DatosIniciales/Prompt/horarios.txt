@@ -1,0 +1,28 @@
+Vamos a desarrollar la planificación en el dashboard de las entregas. El menú Citas pasará a llamarse Disponibilidad y en el se configuraránlos días y horas disponibles 
+para la entrega y como se bloquean tramos en temporales en función de las reservas
+
+el panel tendrá tres bloques:
+
+
+"Días de reparto":
+- Aparecerá un calendario gráfico por meses donde se puedan seleccionar los días donde hay o no reparto. Con un click simple se selecciona o deselecciona un día. Con un click 
+doble se comienza o finaliza la selección de un periodo
+
+"Disponibilidad diaria":
+El administrador podrá definir para cada día de la semana tramos horarios de entrega. Se tendrá la opción de añadir y borrar los tramos que se desee. El sistema controlará que 
+no se solapen. El tamaño se seleccionará en bloques de 30 minutos. Por ejemplo, podríamos definir para el martes un tramo de 9:00 a 13:30 y otro de 15:30 a 19:30.
+
+"Bloqueo de citas":
+Se definirá que periodo se bloquea antes y después (cada uno por separado) una vez seleccionada una cita, para entrega cercana, media o lejana en tramos de 30 minutos. 
+Esto supone 6 registros en total
+
+Las fechas y horas disponibles resultantes a mostrar en los selectores de entrega del pedido se calcularan teniendo en cuenta lo anterior y siguiendo esta lógica:
+
+- Primero se ofrecerán los días disponibles según "Días de reparto".
+- Una vez seleccionado el día se revisarán las horas de ese día disponibles teniendo en cuenta la "Disponibilidad horaria", según que día de la semana es, y las citas ya 
+registradas y los bloqueos asocidas a estas. Sobre el ejemplo anterior, un primer usuario podría seleccionar para el martes cualquier media hora entre las 9:00 y las 13:30 o 
+entre las 15:30 y 19:30. Si este escogiera las 17:00 y el sistema considerara que es una entrega cercana (esto se definirá posteriormente según el CP de la dirección del pedido,
+de momento tomaremos todos los pedidos como cercanos) y los bloqueos definidos fueran de 60 minutos por delante y 30 minutos por detrás, el siguiente cliente no podría seleccionar
+para ese día desde las 16:00 a las 17:30.
+
+Recalco que de la configuración de este panel dependen las opciones de selección de fecha y hora que se dan al cliente en el cierre del pedido.

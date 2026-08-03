@@ -1,0 +1,7 @@
+pendientes 
+
+  1. Crear firestore.rules - Urgente                                                                                                           
+     2. Mover API keys a environment variables o Firebase Remote Config                                                            
+     3. Proteger endpoints /create-payment, /notify, /send-bulk con middleware de auth                                                                                           
+     4. Verificar firma del webhook de Redsys                                                                                                                                    
+     5. Implementar Firebase Custom Claims para roles de admin   

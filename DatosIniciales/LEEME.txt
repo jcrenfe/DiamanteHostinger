@@ -1,0 +1,74 @@
+
+La aplicación está construida como Serverless, de manera que EL CÓDIGO DE BACKEND NO SE ESTÁ USANDO. Las funciones de backend están definidas en la carpeta functions e implementadas en Firebase.
+
+En local se trabaja con las utilidades de Firebase que generan servidores locales simulando las funciones en la nube y usa el código contenido en "functions". La aplicación inicial es index.js
+Firebase.json contiene la configuración del sistema:
+
+	* BLOQUE 1 - FUNCTIONS: Configura dónde está la carpeta con el código de tus funciones de servidor ("functions"), un identificador único de base de código ("default") y una lista de exclusiones (como node_modules o .git) para que no se suban archivos innecesarios a internet.
+	
+	* BLOQUE 2 - EMULATORS: Configura los puertos de red en los que tu ordenador simulará localmente los servicios de Firebase durante el desarrollo (Functions en el puerto 5001, Firestore en el 8080, Auth en el 9099, una interfaz gráfica web de administración "UI" activa, y la base de datos Data Connect).
+	
+	* BLOQUE 3 - DATA CONNECT: Apunta a la carpeta local "dataconnect" que contiene las definiciones de tu futura base de datos SQL basada en PostgreSQL.
+	
+	* BLOQUE 4 - FIRESTORE: Configura los parámetros de tu base de datos NoSQL de producción, especificando que se use la base de datos "diamante-bd" en la región de Madrid (europe-southwest1), e indicando las rutas locales a los archivos de reglas de seguridad (firestore.rules) y sus índices.
+	
+	* BLOQUE 5 - HOSTING: Define cómo se publica el frontend de Angular. Indica que el código compilado está en "frontend/dist/app/browser", excluye del despliegue ciertos archivos locales y añade una regla de reescritura que redirige todo el tráfico a "/index.html" para que el enrutamiento interno de Angular funcione correctamente.
+	
+	* BLOQUE 6 - STORAGE: Asocia el archivo local "storage.rules" para configurar los permisos de subida de archivos adjuntos (como imágenes).
+	
+	* BLOQUE 7 - AUTH (PROVEEDORES): Configura la integración con el inicio de sesión de Google (Google Sign-In), estableciendo que se muestre el nombre de marca "Diamante" y un correo de soporte en caso de incidencias.
+
+***************************************************************************************************************************************************************************************
+
+AUTENTICACIÓN: Es gestionada por Firebase Auth, que crea un token bearer al iniciar sesión.
+***************************************************************************************************************************************************************************************
+Este token es enviado por el cliente al servidor en el encabezado de autorización como "Bearer <token>". 
+El servidor verifica este token y, si es válido, otorga acceso a los recursos protegidos.
+
+El servidor del backend obtiene del token:
+1. Campos que la App lee activamente en el Código. 
+Son los campos que se comprueban en el backend para dar permisos o procesar datos:
+
+	uid (también mapeado como sub): El Identificador Único del Usuario en Firebase (ej. 257504398244). Sirve para saber qué base de datos consultar o a qué usuario asignar una acción.
+	email: El correo electrónico del usuario (ej. admin@desayunocondiamante.com). 	
+	role: El rol del usuario (comprobado en	auth.js línea 43). Se espera que contenga valores como 'admin' para dar acceso completo al Panel de Administración.
+	admin: Un campo booleano complementario (comprobado en auth.js línea 49) que, si es true, confirma que es el administrador global del sistema.
+
+2. Campos del Perfil de Firebase (Disponibles para usar)
+Son campos informativos del usuario provistos automáticamente por Firebase Auth si están completos en su perfil:
+
+	name: El nombre completo registrado del usuario (ej: "Juan Pérez").
+	picture: La URL de la foto de perfil del usuario (muy común si el inicio de sesión se hizo mediante Google Sign-In).
+	email_verified: Un valor booleano (true/false) que te dice si el usuario ya verificó su cuenta por correo.
+	phone_number: El teléfono del usuario si está registrado en Firebase Auth.
+
+3. Campos de Seguridad Interna (Cálculos de JWT)
+Variables técnicas que utiliza el SDK para comprobar que el token no ha sido alterado:
+
+	exp: Tiempo de expiración (marca cuándo se vuelve inválido el token, normalmente 1 hora después de crearse).
+	iat: Tiempo de emisión (cuándo se creó el token).
+	auth_time: El momento en el que el usuario introdujo por última vez sus credenciales reales.
+	aud: El proyecto destino (diamante-f70f4).
+	iss: El servidor emisor del token (https://securetoken.google.com/diamante-f70f4).
+	firebase: Un sub-objeto que describe cómo se autenticó el usuario:
+		json
+		"firebase": {
+		  "sign_in_provider": "google.com", // o "password" (email)
+		  "identities": {
+		    "google.com": ["1029384756..."],
+		    "email": ["admin@desayunocondiamante.com"]
+		  }
+		}
+
+***************************************************************************************************************************************************************************************
+
+BACKEND
+***************************************************************************************************************************************************************************************
+- APP.JS:
+	Inicializa Firebase usando el json contenido en la carpeta Secrets/.
+	Crea una instancia de Express y define el puerto del servidor.
+	Define los middlewares globales del servidor: Helmet (cabeceras HTTP seguras), CORS (peticiones desde cualquier origen) y JSON (parsers para cuerpos de petición).
+	Registra las rutas: /api/contact, /api/payment, /api/campaign, /api/logistics.
+	Define una ruta GET básica en la raíz ('/') para verificar el estado de salud del servidor.
+	Inicia el servidor para escuchar peticiones entrantes en el puerto configurado.
+	

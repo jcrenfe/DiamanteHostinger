@@ -1,0 +1,53 @@
+type User @table {
+  displayName: String!
+  email: String!
+  createdAt: Timestamp!
+  phoneNumber: String
+  address: String
+}
+
+type BreakfastItem @table {
+  name: String!
+  price: Float!
+  createdAt: Timestamp!
+  description: String
+  imageUrl: String
+  ingredients: [String]
+}
+
+type BreakfastPackage @table {
+  name: String!
+  price: Float!
+  createdAt: Timestamp!
+  description: String
+  imageUrl: String
+}
+
+type Order @table {
+  user: User!
+  orderDate: Date!
+  deliveryDate: Date!
+  deliveryTime: String!
+  deliveryAddress: String!
+  totalPrice: Float!
+  status: String!
+  createdAt: Timestamp!
+  specialInstructions: String
+}
+
+type OrderItem @table {
+  order: Order!
+  breakfastItem: BreakfastItem
+  breakfastPackage: BreakfastPackage
+  quantity: Int!
+  unitPrice: Float!
+  customizations: String
+}
+
+type Review @table {
+  user: User!
+  order: Order!
+  rating: Int!
+  createdAt: Timestamp!
+  comment: String
+}

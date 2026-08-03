@@ -1,0 +1,59 @@
+Solicita secuencialmente al usuario:
+1. Necesita gestión de usuarios?
+2. Necesita gestión de productos?
+	2.1 Si necesita gestión de productos, preguntar que tipo de productos.
+3. Necesita gestión de pedidos?
+4. Necesita pasarela de pago?
+5. Necesita formulario de contacto?
+6. Necesita gestión de ofertas en la web?
+7. Necesita gestión de citas?
+8. Necesita gestión de campañas de correo electrónico?
+9. Cuál es el estilo de la web?
+10. Dispones de imagenes y textos asociados?
+	7.1 Si la respuesta es afirmativa solicitar el path a imagenes, el path a textos y si hay algún json de asociación entre imagenes y textos.
+
+El agente registrará las respuestas y actuará en consecuencia creando una web de alta calidad. La estructura tecnológica del sistema y las características del agente están
+definidas en el archivo DefAgente.txt en la ruta relativa a la carpeta de proyecto \DatosIniciales\Prompt\
+
+Las tareas a realizar en función de las respuestas de las preguntas anteriores son:
+1. Deben crearse los directorios y archivos necesarios en la carpeta de proyecto, para poder gestionar la base tecnológica definida en DefAgente.txt y realizar la construcción 
+y pruebas en el entorno local.
+2. Creación de una web de alta calidad gráfica, con animaciones elegantes y suaves, totalmente responsiva y adpatada a su visualización en móviles, tablets y escritorio
+siguendo las indicaciones de estilo que el usuario ha indicado en la pregunta 6 y usando los elementos de texto y gráficos y sus asociaciones definidos en 7.1 (si los hubiera). 
+Si no se dispone de elementos gráficos y de texto, el agente creará las imagenes y los textos para conseguir una web elegante, rica en contenido y muy gráfica. Las imagenes usadas 
+(facilitadas por el usuario o creadas por el agente) deben ser tratadas previamente para que contribuyan a la fluidez de la web, modificando su resolución y tamaño si fuera conveniente. 
+Siempre deben gestionarse las imagenes mediante lazy loading.
+3. Se reusarán los siguientes componentes existentes en la carpeta C:\WEBs\componentes adaptándolos a la estética y flujos de la web.
+	2.1. accessibility-menu
+	2.2. cookie-banner.
+4. Se crearán las siguientes páginas siguiendo los archivos html modelo que están en C:\WEBs\componentes\legales. Cada uno de ellos hace referencia a una imagen ilustrativa
+al comienzo de la página que deberá ser creada por el agente haciendo referencia al contenido del texto y con el estilo global definido para la web:
+	- aviso-legal
+	- politica-accesibilidad
+	- politica-cookies
+	- politica-privacidad
+5. Si la respuesta a la pregunta 1 es afirmativa, se creará una gestión de usuarios básica de la web, que permita dos roles de acceso, administrador y cliente. El cliente deberá
+aportar como datos obligatorios nombre, e-mail y password (con casilla de confirmación y posibilidad de ver u ocultar las password). El sistema permitirá que el usuario se logue 
+mediante su cuenta de Google o introduciendo los datos manualmente. Tendrá también la opción de resetear o recuperar su contraseña mediante una confirmación al correo electrónico declarado.
+6. Si la respuesta a la pregunta 2 es afirmativa, se creará un módulo de gestión de productos adecuado al tipo de producto declarado en 2.1. Sobre cada producto se podrá aplicar un 
+precio base, una imagen, una descripción resumen, una descripción extendida y ofertas (gestionadas por un módulo de gestión de ofertas si se ha respondido afirmativamente a la pregunta 6).
+7. Si la respuesta a la pregunta 3 es afirmativa, se creará un módulo de gestión de pedidos adecuado al tipo de producto declarado en 2.1. Incluirá una gestión tipo "carrito de 
+la compra"
+8. Si la respuesta a la pregunta 4 es afirmativa, se creará una sección adecuada dentro del "carrito de la compra" para poder efectuar los pagos. Configura la pasarela usando las
+indicaciones contenidas en C:\WEBs\componentes\pasarela\redsys.txt
+9. Si la respuesta a la pregunta 5 es afirmativa se creara un formulario y su servicio en el backend adaptando los componentes siguientes que se encuentran en C:\WEBs\componentes
+	9.1. contacto-con-captcha. En este componente se debe trabajar inicialmente con las claves de prueba del captcha de cloudflare:
+		 - Site Key: `1x00000000000000000000AA`
+		 - Secret Key: `1x0000000000000000000000000000000AA`
+	9.2. servidor-contacto-node Este componente se integrará en el backend para gestionar las peticiones del captcha de cloudflare.
+10. Si la respuesta a la pregunta 6 es afirmativa se creara un modulo de gestión de ofertas por producto o grupos de productos, que permitirá modificar la pagina de inicio con 
+ofertas puntuales, avisos o llamamientos, que se podrán programar en cuanto a fecha de inicio, fecha de fin, duración, público o reservado a clientes especificos a escoger 
+desde la base de datos de clientes.
+11. Si la respuesta a la pregunta 7 es afirmativa se creara un modulo de gestión de citas que permita que el cliente seleccione día y hora, esta última en intervalos de media hora
+y que permita al administrador configurar periodos sin servicio y horas (en intervalos de media hora) a bloquear automáticamente cuando un cliente selecciona una cita, 
+antes o después de ella.
+12. Si la respuesta a la pregunta 8 es afirmativa se creara un modulo de gestión de campañas de e-mail que permita al administrador crear correos de forma estructurada
+(es decir, que permita al administrador introducir una cabecera, un texto resumen, imágenes descriptivas y un mensaje de llamada a la acción). El sistema creará un body del correo 
+de muestra enriquecido y visualmente atractivo, usando HTML y siguiendo la estética global de la web. Estos diseños se podrán guardar en la BD. Para el envío el administrador podrá
+establecer a que clientes se envía y en que fecha y programar repeticiones periódicas.
+

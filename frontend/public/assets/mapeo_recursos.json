@@ -1,0 +1,427 @@
+[
+  {
+    "url_origen": "https://www.desayunocondiamante.com/",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\logo.png",
+    "textos_asociados": [
+      "Desayuno con Diamante",
+      "DESAYUNOS Y MERIENDAS A DOMICILIO"
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/",
+    "ruta_texto": "C:\\WEBs\\Diamante\\DatosIniciales\\Textos\\quienes_somos.txt",
+    "contenido_resumen": "Quienes somos: Formamos parte del Grupo Diamante España...",
+    "tipo": "libre"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos/products/desayuno-con-diamante",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\amanece_que_no_es_poco.jpg",
+    "textos_asociados": [
+      "AMANECE QUE NO ES POCO",
+      "€30,00 EUR",
+      "CESTA DE MIMBRE, TAZA, SERVILLETA, MANTEL, CUBIERTOS, CAFE, TES, AZUCAR Y EDULCORANTE, MERMELADA, MANTEQUILLA, ACEITE DE OLIVA, TOMATE TRITURADO, LECHE, ZUMO, TOSTADAS, MAGDALENA, CROISSANT, DONUTS, CARACOLA O TRENZA, TARJETA RECORDATORIA."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos/products/preciuos",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\precious.png",
+    "textos_asociados": [
+      "PRECIOUS",
+      "€32,00 EUR",
+      "CESTA DE MIMBRE, TAZA, CUBIERTOS, MANTEL, SERVILLETA, CAFE NORMAL O DESCAFEINADO, TE, AZUCAR Y EDULCORANTE, LECHE NORMAL O DE AVENA, 1 PANECILLO DE SEMILLAS, 1 PANECILLO INTEGRAL, ACEITE DE OLIVA, TOMATE TRITURADO, 1 YOGUR, 1 KIWI, 1 AGUACATE, 1 ZUMO, TORTITAS DE ARROZ, BARRITA ENERGÉTICA, TARJETA RECORDATORIA."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos/products/desayuno-con-diamantes",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\desayuno_con_diamantes.png",
+    "textos_asociados": [
+      "DESAYUNO CON DIAMANTES",
+      "€35,00 EUR",
+      "CESTA DE MIMBRE, TAZA, SERVILLETA, MANTEL, CUBIERTOS, CAFE, TES, CAPUCHINO, COLACAO, LECHE, ZUMO, AZUCAR Y EDULCORANTE, MERMELADA, MANTEQUILLA, ACEITE DE OLIVA, TOMATE TRITURADO, TOSTADAS, MAGDALENA, CROISSANT, DONUTS, CARACOLA O TRENZA, FRUTA, TARJETA RECORDATORIA."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/novedad-cestas-de-frutas/products/fresa-y-chocolate",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\fresa_y_chocolate.png",
+    "textos_asociados": [
+      "FRESA Y CHOCOLATE",
+      "€49,00 EUR",
+      "CESTA DE MIMBRE, 1 PIÑA, FRESAS APROX 500 GRS, ARÁNDANOS APROX 200 GRS, 3 KIWIS, 3 MANZANAS ROJAS, 3 MANZANAS VERDES, 3 PLATANOS, 1 CAJA DE BOMBONES, 1 TABLETA DE CHOCOLATE, TARJETA RECORDATORIA."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/bebes-e-infantiles/products/tadeo-jones",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\tadeo_jones.png",
+    "textos_asociados": [
+      "TADEO JONES",
+      "€36,00 EUR",
+      "CESTA DE MIMBRE, TAZA INFANTIL, CUBIERTOS, SERVILLETAS, MANTEL, AZUCAR Y EDULCORANTE, COLACAO, LECHE, ZUMO, BATIDO DE FRUTAS, 2 DONUTS, 1 CROISSANT, GALLETAS INFANTILES, CEREALES, MERMELADA, FRUTA, CHUCHES, TARJETA RECORDATORIA, GLOBO INFANTIL."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/dia-del-padre/products/en-el-nombre-del-padre",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\en_el_nombre_del_padre.jpg",
+    "textos_asociados": [
+      "EN EL NOMBRE DEL PADRE",
+      "€33,00 EUR",
+      "BANDEJA O CESTA DE MIMBRE, TAZA, SERVILLETA, MANTEL, CUBIERTOS, CAFE, TES, AZUCAR Y EDULCORANTE, MERMELADA, MANTEQUILLA, ACEITE DE OLIVA, LECHE, ZUMO, TOSTADAS, MAGDALENA, CROISSANT, DONUTS, CARACOLA O TRENZA, TARJETA RECORDATORIA, GLOBO ESPECIAL DIA DEL PADRE."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/merienda-y-brunch/products/jamon-jamon",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\jamon,_jamon.jpg",
+    "textos_asociados": [
+      "JAMON, JAMON",
+      "€49,90 EUR",
+      "CESTA DE MIMBRE, SERVILLETA, MANTEL, CUBIERTOS, FRUTOS SECOS SURTIDOS, JAMON IBERICO, CHORIZO IBERICO, SALCHICHON IBERICO, QUESO SEMICURADO, PATES, 3 PIEZAS DE PAN DE DISTINTAS VARIEDADES, TOSTADAS, ACEITE DE OLIVA, 3 BOTELLINES DE CERVEZA, CONSULTE PARA AGREGAR 1 BOTELLA DE VINO TINTO, BLANCO O ROSADO."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/productos-opcionales-para-agregar-a-desayunos",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\fruta_adicional.jpg",
+    "textos_asociados": [
+      "FRUTA ADICIONAL",
+      "€1,50 EUR",
+      "Fruta de temporada para añadir a tu cesta."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/productos-opcionales-para-agregar-a-desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "GLOBO ADICIONAL",
+      "€2,50 EUR",
+      "Globo de helio para celebraciones."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/productos-opcionales-para-agregar-a-desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "CAVA Y COPA ADICIONAL",
+      "€5,00 EUR",
+      "Botellín de cava y copa de cristal."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/productos-opcionales-para-agregar-a-desayunos",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\bandeja_de_pates_adicional.jpg",
+    "textos_asociados": [
+      "BANDEJA DE PATES ADICIONAL",
+      "€6,00 EUR",
+      "Surtido de patés artesanales."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/productos-opcionales-para-agregar-a-desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "BANDEJA DE DULCES ADICIONAL",
+      "€8,00 EUR",
+      "Surtido de dulces y bollería."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/productos-opcionales-para-agregar-a-desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "BIZCOCHO DE CUMPLEANOS",
+      "€8,00 EUR",
+      "Bizcocho casero para cumpleaños."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "TOAST",
+      "€36,00 EUR",
+      "Desayuno enfocado en tostadas y complementos salados."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "QUE BELLO ES VIVIR",
+      "€41,00 EUR",
+      "Cesta completa con variedad de productos premium."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "EN BUSCA DE LA FELICIDAD",
+      "€41,00 EUR",
+      "Selección especial para regalar felicidad."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "EL FESTIN DE BABETTE",
+      "€49,90 EUR",
+      "Un auténtico festín para los paladares más exigentes."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/desayunos",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "AMORES SALADOS PLACERES DULCES",
+      "€49,90 EUR",
+      "Combinación perfecta de dulce y salado."
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\globo_adicional.jpg",
+    "textos_asociados": [
+      "GLOBO ADICIONAL",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\jamon,_jamon.jpg",
+    "textos_asociados": [
+      "JAMON, JAMON",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\la_dolce_vita.jpg",
+    "textos_asociados": [
+      "LA DOLCE VITA",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\la_naranja_mecánica.png",
+    "textos_asociados": [
+      "LA NARANJA MECÁNICA",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\la_vida_es_bella.jpg",
+    "textos_asociados": [
+      "LA VIDA ES BELLA",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\los_lunes_al_sol.jpg",
+    "textos_asociados": [
+      "LOS LUNES AL SOL",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\madre_no_hay_mas_que_una.png",
+    "textos_asociados": [
+      "MADRE NO HAY MAS QUE UNA",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\madres_paralelas.png",
+    "textos_asociados": [
+      "MADRES PARALELAS",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\madres_verdaderas.png",
+    "textos_asociados": [
+      "MADRES VERDADERAS",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\mamma_mia_!!.png",
+    "textos_asociados": [
+      "MAMMA MIA !!",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\mia_madre.png",
+    "textos_asociados": [
+      "MIA MADRE",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\modern_family.jpg",
+    "textos_asociados": [
+      "MODERN FAMILY",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\notting_hill.jpg",
+    "textos_asociados": [
+      "NOTTING HILL",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\padre_coraje.jpg",
+    "textos_asociados": [
+      "PADRE CORAJE",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\padre_no_hay_mas_que_uno.jpg",
+    "textos_asociados": [
+      "PADRE NO HAY MAS QUE UNO",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\peluche_adicional.jpg",
+    "textos_asociados": [
+      "PELUCHE ADICIONAL",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\precious.png",
+    "textos_asociados": [
+      "PRECIOUS",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\romeo_y_julieta.png",
+    "textos_asociados": [
+      "ROMEO Y JULIETA",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\tadeo_jones.png",
+    "textos_asociados": [
+      "TADEO JONES",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": null,
+    "textos_asociados": [
+      "TODO SOBRE MI MADRE",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\adicional_flores.png",
+    "textos_asociados": [
+      "ADICIONAL FLORES",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\adicional_para_dos_personas.jpg",
+    "textos_asociados": [
+      "ADICIONAL PARA DOS PERSONAS",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  },
+  {
+    "url_origen": "https://www.desayunocondiamante.com/collections/all",
+    "ruta_imagen": "C:\\WEBs\\Diamante\\DatosIniciales\\Imagenes\\adicional_termo.png",
+    "textos_asociados": [
+      "ADICIONAL TERMO",
+      "",
+      ""
+    ],
+    "tipo": "asociado"
+  }
+]
