@@ -200,7 +200,7 @@ export class LoginComponent {
          await this.authService.resetPassword(email);
          this.toastService.success("Email de recuperación enviado. Revisa tu bandeja de entrada.");
       } catch (err: any) {
-         const friendlyMsg = this.authService.getFriendlyErrorMessage(err.code || err.message);
+         const friendlyMsg = err.message || 'Error al restablecer la contraseña';
          this.toastService.error(friendlyMsg);
       }
    }

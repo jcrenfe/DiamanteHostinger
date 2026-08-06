@@ -11,8 +11,7 @@ import { HeaderComponent } from '../../components/header/header.component';
 import { DeliveryCalendarComponent } from '../../components/delivery-calendar/delivery-calendar.component';
 import { ConfirmDialogService } from '../../services/confirm-dialog.service';
 import { loadStripe } from '@stripe/stripe-js';
-import { db } from '../../app.firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { environment } from '../../../environments/environment';
 
 const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeFBfX6MjgwfVFjnzioEPTDNdapGQaDYO3cC7Mz008EtsfQRx';
 
@@ -371,17 +370,16 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   listenToOrderStatus(orderDocId: string) {
     if (!orderDocId) return;
     if (this.unsubscribeOrderListener) {
-      try { this.unsubscribeOrderListener(); } catch (e) { }
+      clearInterval(this.unsubscribeOrderListener);
       this.unsubscribeOrderListener = null;
     }
 
-    const orderRef = doc(db, 'pedidos', orderDocId);
-    this.unsubscribeOrderListener = onSnapshot(orderRef, async (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data['status'] === 'cancelled' && (this.showStripeCheckout() || this.isSubmitting())) {
+    this.unsubscribeOrderListener = setInterval(async () => {
+      const order = await this.orderService.getOrderById(orderDocId);
+      if (order) {
+        if (order.status === 'cancelled' && (this.showStripeCheckout() || this.isSubmitting())) {
           if (this.unsubscribeOrderListener) {
-            try { this.unsubscribeOrderListener(); } catch (e) { }
+            clearInterval(this.unsubscribeOrderListener);
             this.unsubscribeOrderListener = null;
           }
           if (this.checkoutInstance) {
@@ -393,15 +391,21 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
           await this.confirmDialog.open({
             title: '🔴 Pedido Cancelado',
-            message: 'Has alcanzado el número máximo de 3 intentos fallidos de pago para este pedido (o el tiempo límite ha expirado). El pedido ha sido cancelado y la hora reservada liberada.',
+            message: 'Has alcanzado el número máximo de intentos fallidos de pago para este pedido (o el tiempo límite ha expirado). El pedido ha sido cancelado y la hora reservada liberada.',
             confirmText: 'Entendido',
             cancelText: '',
             type: 'danger'
           });
           this.router.navigate(['/productos']);
+        } else if (order.status === 'paid') {
+            if (this.unsubscribeOrderListener) {
+                clearInterval(this.unsubscribeOrderListener);
+                this.unsubscribeOrderListener = null;
+            }
+            this.router.navigate(['/checkout/success'], { queryParams: { order_id: orderDocId } });
         }
       }
-    });
+    }, 5000) as any;
   }
 
   async ngOnInit() {
@@ -574,7 +578,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       this.stripeMessageListener = null;
     }
     if (this.unsubscribeOrderListener) {
-      try { this.unsubscribeOrderListener(); } catch (e) { }
+      clearInterval(this.unsubscribeOrderListener);
       this.unsubscribeOrderListener = null;
     }
     if (this.checkoutInstance) {

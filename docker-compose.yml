@@ -1,0 +1,17 @@
+services:
+  db:
+    image: mysql:8
+    container_name: diamante_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: diamante_db
+      MYSQL_USER: diamante_user
+      MYSQL_PASSWORD: diamantepassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

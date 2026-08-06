@@ -1,11 +1,12 @@
-import { Injectable, signal } from '@angular/core';
-import { db } from '../app.firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, orderBy, writeBatch, where } from 'firebase/firestore';
+import { Injectable, signal, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Category {
     id?: string;
     name: string;
-    isDefault?: boolean; // For "Varios"
+    isDefault?: boolean; 
     order?: number;
 }
 
@@ -13,52 +14,46 @@ export interface Category {
     providedIn: 'root'
 })
 export class CategoryService {
+    private http = inject(HttpClient);
+    private readonly API_URL = `${environment.apiUrl}/categories`;
+
     private categoriesSignal = signal<Category[]>([]);
     categories = this.categoriesSignal.asReadonly();
 
-    constructor() {}
+    private getHeaders() {
+        const token = localStorage.getItem('token');
+        return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    }
 
     async loadCategories(): Promise<void> {
         try {
-            const q = query(collection(db, 'categorias'), orderBy('order', 'asc'));
-            const snap = await getDocs(q);
+            const list = await firstValueFrom(this.http.get<Category[]>(this.API_URL));
             
-            if (snap.empty) {
-                // Seed initial categories if none exist
-                await this.seedInitialCategories();
-                return this.loadCategories();
+            if (!list || list.length === 0) {
+                // If backend has no categories, we don't try to seed them from public page to avoid 401
+                this.categoriesSignal.set([]);
+                return;
             }
 
-            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Category);
-            
-            // 🔥 MIGRATION: Auto-rename "Varios" to "Desayunos" if found as default
-            const varios = list.find(c => (c.name === 'Varios' || c.id === 'varios') && c.isDefault);
-            if (varios) {
-                await this.saveCategory({ ...varios, name: 'Desayunos' });
-                return this.loadCategories(); // Reload after migration
-            }
-
-            this.categoriesSignal.set(list);
+            this.categoriesSignal.set(list.sort((a, b) => (a.order || 0) - (b.order || 0)));
         } catch (err) {
-            // Si hay un error al leer de la BD (ej. permisos), mostramos las iniciales si estuvieran cargadas
+            console.error(err);
         }
     }
 
     private async seedInitialCategories() {
         const initialNames = ["Cestas de frutas", "Desayuno infantil", "Desayunos", "Merienda y brunch", "Productos adicionales"];
-        const batch = writeBatch(db);
-
-        initialNames.forEach((name, index) => {
+        
+        for (let i = 0; i < initialNames.length; i++) {
+            const name = initialNames[i];
             const id = this.slugify(name);
-            const docRef = doc(db, 'categorias', id);
-            batch.set(docRef, {
+            await firstValueFrom(this.http.post(this.API_URL, {
+                id,
                 name,
                 isDefault: name === 'Desayunos',
-                order: index
-            });
-        });
-
-        await batch.commit();
+                order: i
+            }, { headers: this.getHeaders() }));
+        }
     }
 
     private slugify(text: string): string {
@@ -74,45 +69,30 @@ export class CategoryService {
         if (category.id) {
             const oldCat = this.categories().find(c => c.id === category.id);
             if (oldCat && oldCat.name !== category.name) {
-                // Rename detected: propagate to products
                 await this.propagateCategoryRename(oldCat.name, category.name);
             }
-            await updateDoc(doc(db, 'categorias', category.id), { ...category });
+            await firstValueFrom(this.http.put(`${this.API_URL}/${category.id}`, category, { headers: this.getHeaders() }));
         } else {
             const id = this.slugify(category.name);
-            const newDoc = doc(db, 'categorias', id);
-            await setDoc(newDoc, { ...category, id });
+            await firstValueFrom(this.http.post(this.API_URL, { ...category, id }, { headers: this.getHeaders() }));
         }
         await this.loadCategories();
     }
 
     async deleteCategory(id: string) {
-        // Find if it's default
         const cat = this.categories().find(c => c.id === id);
         if (cat?.isDefault) {
             throw new Error('No se puede eliminar la categoría predeterminada.');
         }
 
-        // Move products to "Desayunos" before deleting
         await this.reassignProductsToDefault(cat?.name);
-
-        await deleteDoc(doc(db, 'categorias', id));
+        await firstValueFrom(this.http.delete(`${this.API_URL}/${id}`, { headers: this.getHeaders() }));
         await this.loadCategories();
     }
 
     private async propagateCategoryRename(oldName: string, newName: string) {
-        const productsRef = collection(db, 'productos');
-        const productsRef = collection(db, 'productos');
-        const q = query(productsRef, where('category', '==', oldName));
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => {
-                batch.update(d.ref, { category: newName });
-            });
-            await batch.commit();
-        }
+        // Implement in backend, frontend simply triggers a dedicated endpoint or does nothing if backend handles
+        await firstValueFrom(this.http.post(`${this.API_URL}/rename`, { oldName, newName }, { headers: this.getHeaders() }));
     }
 
     private async reassignProductsToDefault(oldCategoryName?: string) {
@@ -121,16 +101,9 @@ export class CategoryService {
         const defaultCat = this.categories().find(c => c.isDefault);
         if (!defaultCat) return;
 
-        const productsRef = collection(db, 'productos');
-        const q = query(productsRef, where('category', '==', oldCategoryName));
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => {
-                batch.update(d.ref, { category: defaultCat.name });
-            });
-            await batch.commit();
-        }
+        await firstValueFrom(this.http.post(`${this.API_URL}/reassign`, { 
+            oldCategoryName, 
+            newCategoryName: defaultCat.name 
+        }, { headers: this.getHeaders() }));
     }
 }

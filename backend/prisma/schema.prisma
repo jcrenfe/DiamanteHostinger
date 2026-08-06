@@ -1,0 +1,129 @@
+generator client {
+  provider      = "prisma-client-js"
+  engineType    = "binary"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  uid         String   @unique // Firebase UID o ID propio si es clásico
+  email       String   @unique
+  displayName String?
+  photoURL    String?
+  role        String   @default("cliente") // "admin" o "cliente"
+  password    String?  // Hash para login clásico
+  
+  orders      Order[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Product {
+  id               String   @id // Mantener IDs string tipo Firebase si es necesario
+  name             String?
+  price            Float?
+  description      String?  @db.Text
+  category         String?
+  local_image_path String?
+  url_origen       String?
+  tipo             String?
+  showOnHome       Boolean  @default(false)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  order       Int      @default(0)
+  isDefault   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+}
+
+model Order {
+  id                    String   @id @default(uuid())
+  redsysOrderId         String?  @unique
+  stripeSessionId       String?
+
+  // Customer info
+  customer_uid          String?
+  customer_name         String
+  customer_email        String
+  customer_phone        String
+
+  // Delivery info
+  delivery_address      String
+  delivery_city         String
+  delivery_zip          String
+  delivery_date         String
+  delivery_timeSlot     String
+  delivery_message      String?  @db.Text
+
+  total                 Float
+  status                String   @default("pending") // pending, paid, delivered, cancelled
+  failedPaymentAttempts Int      @default(0)
+  lastStripeErrorId     String?
+
+  items                 OrderItem[]
+  user                  User?       @relation(fields: [customer_uid], references: [uid])
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   String
+  productId String?
+  name      String
+  price     Float
+  quantity  Int
+  
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id        String   @id @default(uuid())
+  title     String
+  subject   String
+  content   String   @db.Text
+  status    String   @default("draft")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Offer {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  code            String?
+  discountPercent Float?
+  active          Boolean   @default(true)
+  type            String    @default("banner")
+  imageUrl        String?
+  validUntil      DateTime?
+  backgroundImage String?
+  backgroundColor String?
+  productId       String?
+  ribbonText      String?
+  ribbonColor     String?
+  ribbonTextColor String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Configuration {
+  id    String @id
+  value Json
+}

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { db } from '../app.firebase';
-import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface TimeSlot {
     time: string; // "08:00", "08:30", etc.
@@ -29,14 +30,14 @@ export interface ProximityBlock {
 
 export interface ProximityConfig {
     [key: string]: ProximityBlock;
-    near: ProximityBlock;   // Proximidad: Cercana
-    medium: ProximityBlock; // Proximidad: Media
-    far: ProximityBlock;    // Proximidad: Lejana
+    near: ProximityBlock;   
+    medium: ProximityBlock; 
+    far: ProximityBlock;    
 }
 
 export interface AppointmentConfig {
-    deliveryDays: string[]; // List of specific dates (YYYY-MM-DD) that ARE delivery days
-    dailySlots: DailySlots; // Slots per weekday
+    deliveryDays: string[]; 
+    dailySlots: DailySlots; 
     blockingRules: ProximityConfig;
 }
 
@@ -44,17 +45,19 @@ export interface AppointmentConfig {
     providedIn: 'root'
 })
 export class AppointmentService {
+    private http = inject(HttpClient);
+    private readonly API_URL = environment.apiUrl;
 
     private defaultConfig: AppointmentConfig = {
-        deliveryDays: [], // Empty means use standard logic or special manual choice
+        deliveryDays: [], 
         dailySlots: {
-            "1": [{ start: "09:00", end: "13:00" }], // Example: Monday
+            "1": [{ start: "09:00", end: "13:00" }], 
             "2": [{ start: "09:00", end: "13:00" }],
             "3": [{ start: "09:00", end: "13:00" }],
             "4": [{ start: "09:00", end: "13:00" }],
             "5": [{ start: "09:00", end: "13:00" }],
-            "6": [], // Saturday
-            "0": []  // Sunday (JS getDay: 0 is Sunday, 1 is Monday)
+            "6": [], 
+            "0": []  
         },
         blockingRules: {
             near: { beforeMinutes: 60, afterMinutes: 30 },
@@ -63,24 +66,21 @@ export class AppointmentService {
         }
     };
 
-    /**
-     * Logic:
-     * 1. Only days in 'deliveryDays' are available.
-     * 2. Hours depend on 'dailySlots' for that weekday.
-     * 3. Already booked orders + their proximity blocks remove slots.
-     */
+    private getHeaders() {
+        const token = localStorage.getItem('token');
+        return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    }
+
     async getAvailableSlots(dateStr: string, proximity: 'near' | 'medium' | 'far' = 'near'): Promise<TimeSlot[]> {
         const config = await this.getConfig();
         const [y, m, d] = dateStr.split('-').map(Number);
         const date = new Date(y, m - 1, d);
-        const weekday = date.getDay().toString(); // 0 is Sunday
+        const weekday = date.getDay().toString();
         
-        // 1. Check if day is a delivery day
         if (!config.deliveryDays.includes(dateStr)) {
             return [];
         }
 
-        // 2. Generate slots based on dailySlots for this day
         const ranges = config.dailySlots[weekday] || [];
         if (ranges.length === 0) return [];
 
@@ -90,37 +90,34 @@ export class AppointmentService {
             const end = this.timeToMinutes(range.end);
             while (current < end) {
                 allPossibleSlots.push(this.minutesToTime(current));
-                current += 30; // Blocks of 30 minutes
+                current += 30; 
             }
         });
 
-        // 3. Get existing appointments and apply blocks
-        const ordersCol = collection(db, 'pedidos');
-        const q = query(ordersCol, where('delivery.date', '==', dateStr));
-        const snapshot = await getDocs(q);
+        // Get existing appointments
+        let orders: any[] = [];
+        try {
+            orders = await firstValueFrom(this.http.get<any[]>(`${this.API_URL}/orders?date=${dateStr}`, { headers: this.getHeaders() }));
+        } catch(e) {
+            console.error(e);
+        }
 
         const blockedMinutes = new Set<number>();
         
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data['status'] === 'cancelled') return;
-            const delivery = data['delivery'];
+        orders.forEach(data => {
+            if (data.status === 'cancelled') return;
+            const delivery = data.delivery || { timeSlot: data.delivery_timeSlot, time: data.delivery_timeSlot };
             if (delivery && (delivery.timeSlot || delivery.time)) {
                 const timeStr = delivery.timeSlot || delivery.time;
                 const centerMin = this.timeToMinutes(timeStr);
                 
-                // Block the center slot
                 blockedMinutes.add(centerMin);
 
-                // Apply proximity rules (for now all Near as requested)
                 const rule = config.blockingRules[proximity];
-                
                 if (rule) {
-                    // Block BEFORE
                     for (let m = centerMin - 30; m >= centerMin - rule.beforeMinutes; m -= 30) {
                         blockedMinutes.add(m);
                     }
-                    // Block AFTER
                     for (let m = centerMin + 30; m <= centerMin + rule.afterMinutes; m += 30) {
                         blockedMinutes.add(m);
                     }
@@ -134,12 +131,9 @@ export class AppointmentService {
         }));
     }
 
-    /**
-     * Obtiene la disponibilidad (disponible o no) de cada día del mes indicado.
-     */
     async getMonthAvailability(
         year: number,
-        month: number, // 0-indexed (0 = Enero, 11 = Diciembre)
+        month: number, 
         proximity: 'near' | 'medium' | 'far' = 'near'
     ): Promise<Record<string, { available: boolean, reason?: string }>> {
         const config = await this.getConfig();
@@ -151,68 +145,59 @@ export class AppointmentService {
         const lastDay = new Date(year, monthNum, 0).getDate();
         const endDateStr = `${year}-${pad(monthNum)}-${pad(lastDay)}`;
 
-        // Consultar todos los pedidos del mes
-        const ordersCol = collection(db, 'pedidos');
-        const q = query(
-            ordersCol,
-            where('delivery.date', '>=', startDateStr),
-            where('delivery.date', '<=', endDateStr)
-        );
+        let orders: any[] = [];
+        try {
+            // Get all orders for this month (we can do filtering in backend or fetch all and filter in frontend)
+            orders = await firstValueFrom(this.http.get<any[]>(`${this.API_URL}/orders?start=${startDateStr}&end=${endDateStr}`, { headers: this.getHeaders() }));
+        } catch(e) {
+            console.error(e);
+        }
 
         const dateBlockedMinutes = new Map<string, Set<number>>();
-        try {
-            const snapshot = await getDocs(q);
-            snapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                if (data['status'] === 'cancelled') return;
-                const delivery = data['delivery'];
-                if (delivery && delivery.date) {
-                    const timeStr = delivery.timeSlot || delivery.time;
-                    if (timeStr) {
-                        const dateStr = delivery.date;
-                        const centerMin = this.timeToMinutes(timeStr);
+        orders.forEach(data => {
+            if (data.status === 'cancelled') return;
+            const delivery = data.delivery || { date: data.delivery_date, timeSlot: data.delivery_timeSlot };
+            if (delivery && delivery.date) {
+                const timeStr = delivery.timeSlot || delivery.time;
+                if (timeStr) {
+                    const dateStr = delivery.date;
+                    const centerMin = this.timeToMinutes(timeStr);
 
-                        if (!dateBlockedMinutes.has(dateStr)) {
-                            dateBlockedMinutes.set(dateStr, new Set<number>());
+                    if (!dateBlockedMinutes.has(dateStr)) {
+                        dateBlockedMinutes.set(dateStr, new Set<number>());
+                    }
+                    const blockedSet = dateBlockedMinutes.get(dateStr)!;
+                    blockedSet.add(centerMin);
+
+                    const rule = config.blockingRules[proximity] || config.blockingRules['near'];
+                    if (rule) {
+                        for (let m = centerMin - 30; m >= centerMin - rule.beforeMinutes; m -= 30) {
+                            blockedSet.add(m);
                         }
-                        const blockedSet = dateBlockedMinutes.get(dateStr)!;
-                        blockedSet.add(centerMin);
-
-                        const rule = config.blockingRules[proximity] || config.blockingRules['near'];
-                        if (rule) {
-                            for (let m = centerMin - 30; m >= centerMin - rule.beforeMinutes; m -= 30) {
-                                blockedSet.add(m);
-                            }
-                            for (let m = centerMin + 30; m <= centerMin + rule.afterMinutes; m += 30) {
-                                blockedSet.add(m);
-                            }
+                        for (let m = centerMin + 30; m <= centerMin + rule.afterMinutes; m += 30) {
+                            blockedSet.add(m);
                         }
                     }
                 }
-            });
-        } catch (err) {
-        }
+            }
+        });
 
-        // Fecha actual en ISO local YYYY-MM-DD
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
         for (let day = 1; day <= lastDay; day++) {
             const dateStr = `${year}-${pad(monthNum)}-${pad(day)}`;
 
-            // 1. Fecha pasada
             if (dateStr < todayStr) {
                 result[dateStr] = { available: false, reason: 'Día pasado' };
                 continue;
             }
 
-            // 2. Comprobar si está en deliveryDays
             if (!config.deliveryDays || !config.deliveryDays.includes(dateStr)) {
                 result[dateStr] = { available: false, reason: 'No disponible para reparto' };
                 continue;
             }
 
-            // 3. Comprobar slots por día de la semana
             const dateObj = new Date(year, month, day);
             const weekday = dateObj.getDay().toString();
             const ranges = config.dailySlots[weekday] || [];
@@ -262,15 +247,19 @@ export class AppointmentService {
     }
 
     async getConfig(): Promise<AppointmentConfig> {
-        const docRef = doc(db, 'configuracion', 'disponibilidad');
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-            return snap.data() as AppointmentConfig;
+        try {
+            const config = await firstValueFrom(this.http.get<AppointmentConfig>(`${this.API_URL}/config/appointment`, { headers: this.getHeaders() }));
+            return config || this.defaultConfig;
+        } catch(e) {
+            return this.defaultConfig;
         }
-        return this.defaultConfig;
     }
 
     async saveConfig(config: AppointmentConfig) {
-        await setDoc(doc(db, 'configuracion', 'disponibilidad'), config);
+        try {
+            await firstValueFrom(this.http.post(`${this.API_URL}/config/appointment`, config, { headers: this.getHeaders() }));
+        } catch(e) {
+            console.error("Error saving config", e);
+        }
     }
 }

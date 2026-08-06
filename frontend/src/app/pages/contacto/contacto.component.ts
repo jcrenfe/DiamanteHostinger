@@ -4,8 +4,8 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { HttpClient } from '@angular/common/http';
 import { HeaderComponent } from '../../components/header/header.component';
 
-import { functions } from '../../app.firebase';
-import { httpsCallable } from 'firebase/functions';
+import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 declare var turnstile: any;
 
@@ -239,16 +239,13 @@ export class ContactoComponent implements AfterViewInit, OnDestroy {
          this.submitSuccess.set(false);
          this.submitError.set(false);
 
-         // Uso de Firebase HTTPS Callable en lugar de HttpClient puro
-         const sendContactEmail = httpsCallable(functions, 'sendContact');
-         
          const payload = {
             ...this.contactForm.value,
             captchaToken: this.turnstileToken()
          };
 
          try {
-             await sendContactEmail(payload);
+             await firstValueFrom(this.http.post(`${environment.apiUrl}/contact`, payload));
              this.submitSuccess.set(true);
              this.resetForm();
          } catch (err) {

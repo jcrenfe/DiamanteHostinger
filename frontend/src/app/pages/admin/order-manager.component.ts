@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { db } from '../../app.firebase';
-import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { OrderService } from '../../services/order.service';
+import { inject } from '@angular/core';
 
 export interface StatusFilterOption {
   id: string;
@@ -87,7 +87,7 @@ export interface StatusFilterOption {
           <div class="order-header">
             <div class="meta">
               <span class="order-id">#{{ order.id.substring(0,8) }}</span>
-              <span class="date">{{ order.createdAt?.toDate() | date:'medium' }}</span>
+              <span class="date">{{ (order.createdAt | date:'medium') || order.createdAt }}</span>
             </div>
             <div class="status">
               <select [value]="order.status" (change)="updateStatus(order.id, $any($event.target).value)" [class]="order.status">
@@ -101,10 +101,10 @@ export interface StatusFilterOption {
 
           <div class="order-body">
             <div class="customer-info">
-              <p>👤 <strong>{{ order.customer.name }}</strong> ({{ order.customer.email }})</p>
-              <p>📍 {{ order.delivery.address }}, {{ order.delivery.city }} ({{ order.delivery.zip }})</p>
-              <p>📅 Entrega: <strong>{{ order.delivery.date }}</strong> - {{ order.delivery.timeSlot }}</p>
-              <p *ngIf="order.delivery.message">💌 <em>"{{ order.delivery.message }}"</em></p>
+              <p>👤 <strong>{{ order.customer_name }}</strong> ({{ order.customer_email }})</p>
+              <p>📍 {{ order.delivery_address }}, {{ order.delivery_city }} ({{ order.delivery_zip }})</p>
+              <p>📅 Entrega: <strong>{{ order.delivery_date }}</strong> - {{ order.delivery_timeSlot }}</p>
+              <p *ngIf="order.delivery_message">💌 <em>"{{ order.delivery_message }}"</em></p>
             </div>
 
             <div class="items-list">
@@ -286,6 +286,7 @@ export interface StatusFilterOption {
 })
 export class OrderManagerComponent implements OnInit {
   orders = signal<any[]>([]);
+  private orderService = inject(OrderService);
 
   statusOptions: StatusFilterOption[] = [
     { id: 'pending', label: 'Pendiente', cssClass: 'chip-pending' },
@@ -306,11 +307,11 @@ export class OrderManagerComponent implements OnInit {
     // 1. Filtrar por estados seleccionados
     const list = this.orders().filter(order => statuses.includes(order.status || 'pending'));
 
-    // 2. Ordenar por campo y dirección
-    return list.sort((a, b) => {
+    // 2. Ordenar — se hace sobre una COPIA para que Signals detecte el nuevo array
+    return [...list].sort((a, b) => {
       if (field === 'date') {
-        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dir === 'asc' ? timeA - timeB : timeB - timeA;
       } else {
         const nameA = (a.customer?.name || '').toLowerCase();
@@ -325,9 +326,10 @@ export class OrderManagerComponent implements OnInit {
   }
 
   async loadOrders() {
-    const q = query(collection(db, 'pedidos'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    this.orders.set(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      const list = await this.orderService.getAllOrders();
+      this.orders.set(list || []);
+    } catch (e) {}
   }
 
   isStatusSelected(status: string): boolean {
@@ -359,7 +361,7 @@ export class OrderManagerComponent implements OnInit {
 
   async updateStatus(id: string, newStatus: string) {
     try {
-      await updateDoc(doc(db, 'pedidos', id), { status: newStatus });
+      await this.orderService.updateOrderStatus(id, newStatus);
       this.orders.update(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
     } catch (err) {
       alert('Error actualizando estado');

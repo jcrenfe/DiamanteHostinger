@@ -1,7 +1,9 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { db } from '../../app.firebase';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { OrderService } from '../../services/order.service';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -49,8 +51,8 @@ import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
             </thead>
             <tbody>
               <tr *ngFor="let order of recentOrders()">
-                <td>{{ order.customer.name }}</td>
-                <td>{{ order.createdAt?.toDate() | date:'short' }}</td>
+                <td>{{ order.customer_name || 'Sin nombre' }}</td>
+                <td>{{ (order.createdAt | date:'short') || order.createdAt }}</td>
                 <td>{{ order.total | number:'1.2-2' }}€</td>
                 <td><span class="status-badge" [class]="order.status">{{ getStatusLabel(order.status) }}</span></td>
               </tr>
@@ -90,32 +92,40 @@ export class AdminDashboardComponent implements OnInit {
   totalRevenue = signal(0);
   recentOrders = signal<any[]>([]);
 
+  private orderService = inject(OrderService);
+  private http = inject(HttpClient);
+
   async ngOnInit() {
     this.loadStats();
   }
 
   async loadStats() {
     // Orders
-    const ordersCol = collection(db, 'pedidos');
-    const orderSnap = await getDocs(ordersCol);
-    this.totalOrders.set(orderSnap.size);
+    const orders = await this.orderService.getAllOrders();
+    this.totalOrders.set(orders.length);
 
     let rev = 0;
-    const orders: any[] = [];
-    orderSnap.forEach(doc => {
-      const data = doc.data();
-      rev += data['total'] || 0;
-      orders.push(data);
+    orders.forEach(data => {
+      rev += Number(data['total']) || 0;
     });
     this.totalRevenue.set(rev);
 
     // Sort recent
-    this.recentOrders.set(orders.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).slice(0, 5));
+    this.recentOrders.set(orders.sort((a, b) => {
+        const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return tB - tA;
+    }).slice(0, 5));
 
     // Products
-    const prodCol = collection(db, 'productos');
-    const prodSnap = await getDocs(prodCol);
-    this.totalProducts.set(prodSnap.size);
+    try {
+        const token = localStorage.getItem('token');
+        const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+        const products = await firstValueFrom(this.http.get<any[]>(`${environment.apiUrl}/products`, { headers })) || [];
+        this.totalProducts.set(products.length);
+    } catch(e) {
+        this.totalProducts.set(0);
+    }
   }
 
   getStatusLabel(status: string): string {

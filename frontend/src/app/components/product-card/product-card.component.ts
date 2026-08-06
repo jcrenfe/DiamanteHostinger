@@ -2,18 +2,19 @@ import { Component, Input, Output, EventEmitter, inject, ElementRef, AfterViewIn
 import { isPlatformBrowser } from '@angular/common';
 import { SlicePipe, NgIf } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 import { ResourceMap } from '../../store/app.store';
 import { CartStore } from '../../store/cart.store';
 
 @Component({
   selector: 'app-product-card',
   standalone: true,
-  imports: [SlicePipe, NgIf, RouterModule],
+  imports: [SlicePipe, NgIf, RouterModule, ImageUrlPipe],
   template: `
     <div class="fade-in" style="height: 100%;">
       <div class="card-container" [class.mobile-hover]="isMobileHover()">
         <div class="card-image-wrap" [routerLink]="previewMode ? null : ['/producto', product.id]" (click)="handleCardClick($event)">
-          <img [src]="product.local_image_path || 'assets/images/placeholder.jpg'" 
+          <img [src]="product.local_image_path | imageUrl" 
                [alt]="product.name || 'Producto'" 
                loading="lazy" 
                class="card-image"

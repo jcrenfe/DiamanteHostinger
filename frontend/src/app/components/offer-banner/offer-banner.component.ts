@@ -3,15 +3,16 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Offer } from '../../services/offer.service';
 import { AppStore } from '../../store/app.store';
 import { ProductCardComponent } from '../product-card/product-card.component';
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 
 @Component({
   selector: 'app-offer-banner',
   standalone: true,
-  imports: [CommonModule, ProductCardComponent],
+  imports: [CommonModule, ProductCardComponent, ImageUrlPipe],
   template: `
     <ng-container *ngIf="offer">
       <div *ngIf="offer.type !== 'product_deal'" class="promo-banner fade-in" [class]="offer.type" [class.mobile-hover]="isMobileHover()"
-           [style.backgroundImage]="offer.backgroundImage ? 'url(' + offer.backgroundImage + ')' : null"
+           [style.backgroundImage]="offer.backgroundImage ? 'url(' + (offer.backgroundImage | imageUrl) + ')' : null"
            [style.backgroundColor]="offer.backgroundColor || null"
            [style.backgroundSize]="offer.backgroundImage ? 'cover' : null"
            [style.backgroundPosition]="offer.backgroundImage ? 'center' : null">

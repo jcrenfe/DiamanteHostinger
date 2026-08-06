@@ -1,8 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { db } from '../../app.firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { OrderService } from '../../services/order.service';
 import { LogisticsService } from '../../services/logistics.service';
 
 @Component({
@@ -63,8 +62,8 @@ import { LogisticsService } from '../../services/logistics.service';
              <div class="sequence-item" *ngFor="let order of route.orders; let idx = index">
                 <span class="step">{{ idx + 1 }}</span>
                 <div class="info">
-                   <div class="time">{{ order.delivery.timeSlot || order.delivery.time }}</div>
-                   <div class="addr">{{ order.customer.name }} - {{ order.delivery.address }}</div>
+                   <div class="time">{{ order.delivery_timeSlot }}</div>
+                   <div class="addr">{{ order.customer_name }} - {{ order.delivery_address }}</div>
                 </div>
              </div>
           </div>
@@ -110,6 +109,7 @@ import { LogisticsService } from '../../services/logistics.service';
 })
 export class RouteOptimizerComponent implements OnInit {
     private logisticsService = inject(LogisticsService);
+    private orderService = inject(OrderService);
 
     selectedDate = '';
     driverCount = 1;
@@ -128,9 +128,13 @@ export class RouteOptimizerComponent implements OnInit {
 
     async loadOrders() {
         if (!this.selectedDate) return;
-        const q = query(collection(db, 'pedidos'), where('delivery.date', '==', this.selectedDate));
-        const snap = await getDocs(q);
-        this.orders.set(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        try {
+            const allOrders = await this.orderService.getAllOrders();
+            const dateOrders = allOrders.filter(o => o.delivery?.date === this.selectedDate);
+            this.orders.set(dateOrders);
+        } catch (e) {
+            this.orders.set([]);
+        }
         this.results.set(null);
     }
 

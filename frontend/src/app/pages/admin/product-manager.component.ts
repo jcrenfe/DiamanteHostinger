@@ -2,10 +2,10 @@ import { Component, inject, signal, OnInit, NgZone, computed } from '@angular/co
 import { ToastService } from '../../services/toast.service';
 import { ConfirmDialogService } from '../../services/confirm-dialog.service';
 import { CommonModule } from '@angular/common';
-import { db, storage } from '../../app.firebase';
-import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, UploadTask } from 'firebase/storage';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ResourceMap } from '../../store/app.store';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ImageOptimizerService } from '../../services/image-optimizer.service';
@@ -49,7 +49,7 @@ import { ProductCardComponent } from '../../components/product-card/product-card
             </thead>
             <tbody>
               <tr *ngFor="let prod of sortedProducts()" class="fade-in">
-                <td><img [src]="prod.local_image_path || 'assets/images/placeholder.jpg'" 
+                <td><img [src]="getImageUrl(prod.local_image_path)" 
                           (error)="onImgError($event)" 
                           class="thumb"></td>
                 <td>{{ prod.name }}</td>
@@ -295,7 +295,7 @@ export class ProductManagerComponent implements OnInit {
     
     if (!field) return list;
     
-    return list.sort((a, b) => {
+    return [...list].sort((a, b) => {
       const valA = (a[field] as string || '').toLowerCase();
       const valB = (b[field] as string || '').toLowerCase();
       if (valA < valB) return asc ? -1 : 1;
@@ -312,16 +312,41 @@ export class ProductManagerComponent implements OnInit {
   currentProd: Partial<ResourceMap> = {};
   viewingProd = signal<ResourceMap | null>(null);
   uploadProgress = signal(0);
-  private currentUploadTask: UploadTask | null = null;
 
   async ngOnInit() {
     this.categoryService.loadCategories();
     this.loadProducts();
   }
 
+  private http = inject(HttpClient);
+  private readonly API_URL = `${environment.apiUrl}/products`;
+  private readonly UPLOAD_URL = `${environment.apiUrl}/upload`;
+
+  private getHeaders() {
+      const token = localStorage.getItem('token');
+      return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+  }
+
+  getImageUrl(path?: string): string {
+    if (!path) return 'assets/images/placeholder.jpg';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    if (path.startsWith('assets/') || path.startsWith('/assets/')) {
+        return path;
+    }
+    const baseUrl = environment.apiUrl.replace('/api', '');
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return baseUrl + cleanPath;
+  }
+
   async loadProducts() {
-    const snap = await getDocs(collection(db, 'productos'));
-    this.products.set(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ResourceMap));
+    try {
+        const list = await firstValueFrom(this.http.get<ResourceMap[]>(this.API_URL, { headers: this.getHeaders() }));
+        this.products.set(list || []);
+    } catch(e) {
+        this.products.set([]);
+    }
   }
 
   sortBy(field: 'name' | 'category') {
@@ -356,43 +381,27 @@ export class ProductManagerComponent implements OnInit {
 
       const optimizedBlob = await this.imageOptimizer.optimize(file, 1200, 0.75);
 
-      const fileName = `${Date.now()}_${file.name.split('.')[0]}.webp`;
-      const storageRef = ref(storage, `productos/${fileName}`);
+      const formData = new FormData();
+      formData.append('image', optimizedBlob, `${Date.now()}_${file.name.split('.')[0]}.webp`);
 
-      this.currentUploadTask = uploadBytesResumable(storageRef, optimizedBlob, { contentType: 'image/webp' });
+      // Mock upload progress
+      const progressInterval = setInterval(() => {
+          this.zone.run(() => {
+              let current = this.uploadProgress();
+              if (current < 90) this.uploadProgress.set(current + 10);
+          });
+      }, 200);
 
-      this.currentUploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          this.zone.run(() => {
-            this.uploadProgress.set(Math.round(progress));
-          });
-        },
-        (error) => {
-          this.zone.run(() => {
-            if (error.code === 'storage/canceled') {
-              this.toastService.info('Carga cancelada');
-            } else {
-              let msg = `Error de subida: ${error.message}`;
-              if (window.location.hostname === 'localhost') {
-                msg += '. Revisa la configuración de CORS en Firebase si el error persiste.';
-              }
-              this.toastService.error(msg);
-            }
-            this.isUploading.set(false);
-            this.currentUploadTask = null;
-          });
-        },
-        async () => {
-          const url = await getDownloadURL(this.currentUploadTask!.snapshot.ref);
-          this.zone.run(() => {
-            this.currentProd.local_image_path = url;
-            this.toastService.success('Imagen optimizada y subida correctamente');
-            this.isUploading.set(false);
-            this.currentUploadTask = null;
-          });
-        }
-      );
+      const response = await firstValueFrom(this.http.post<any>(this.UPLOAD_URL, formData, { headers: this.getHeaders() }));
+      
+      clearInterval(progressInterval);
+      this.uploadProgress.set(100);
+
+      this.zone.run(() => {
+          this.currentProd.local_image_path = response.url;
+          this.toastService.success('Imagen optimizada y subida correctamente');
+          this.isUploading.set(false);
+      });
 
     } catch (e: any) {
       this.toastService.error(`Error de carga: ${e.message || 'Fallo desconocido'}`);
@@ -401,11 +410,8 @@ export class ProductManagerComponent implements OnInit {
   }
 
   cancelUpload() {
-    if (this.currentUploadTask) {
-      this.currentUploadTask.cancel();
+      // Not easily cancellable with standard HttpClient without subscription management, just stop UI
       this.isUploading.set(false);
-      this.currentUploadTask = null;
-    }
   }
 
   previewProduct(prod: ResourceMap) {
@@ -416,17 +422,14 @@ export class ProductManagerComponent implements OnInit {
 
   async duplicateProduct(prod: ResourceMap) {
     try {
-      const newId = `${prod.id}-copy-${Date.now()}`;
-      const clone = { ...prod };
-      // @ts-ignore - explicitly remove id to conform with setDoc requirement
-      delete clone.id;
+      const { id, ...clone } = prod;
 
       const newProd = {
         ...clone,
         name: `${prod.name} (Copia)`
       };
 
-      await setDoc(doc(db, 'productos', newId), newProd);
+      await firstValueFrom(this.http.post(this.API_URL, newProd, { headers: this.getHeaders() }));
       this.toastService.success('Producto duplicado correctamente');
       this.loadProducts();
     } catch (err) {
@@ -442,10 +445,9 @@ export class ProductManagerComponent implements OnInit {
   async saveProduct() {
     try {
       if (this.editingId) {
-        await updateDoc(doc(db, 'productos', this.editingId), this.currentProd);
+        await firstValueFrom(this.http.put(`${this.API_URL}/${this.editingId}`, this.currentProd, { headers: this.getHeaders() }));
       } else {
-        const id = this.currentProd.name?.toLowerCase().replace(/\s+/g, '-') || Date.now().toString();
-        await setDoc(doc(db, 'productos', id), { ...this.currentProd, id });
+        await firstValueFrom(this.http.post(this.API_URL, this.currentProd, { headers: this.getHeaders() }));
       }
       this.closeModal();
       this.loadProducts();
@@ -465,7 +467,7 @@ export class ProductManagerComponent implements OnInit {
 
     if (confirmed) {
       try {
-        await deleteDoc(doc(db, 'productos', id));
+        await firstValueFrom(this.http.delete(`${this.API_URL}/${id}`, { headers: this.getHeaders() }));
         this.toastService.success('Producto eliminado correctamente');
         this.loadProducts();
       } catch (err) {

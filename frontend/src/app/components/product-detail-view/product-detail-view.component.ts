@@ -2,18 +2,19 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ResourceMap } from '../../store/app.store';
 import { RouterModule } from '@angular/router';
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 
 @Component({
   selector: 'app-product-detail-view',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ImageUrlPipe],
   template: `
     <div class="product-detail-view" *ngIf="product">
       <div class="detail-grid fade-in">
         <!-- Image Gallery -->
         <div class="product-gallery">
           <div class="main-image-wrap shadow-lg">
-             <img [src]="product.local_image_path || 'assets/images/placeholder.jpg'" 
+             <img [src]="product.local_image_path | imageUrl" 
                   [alt]="product.name"
                   (error)="onImgError($event)">
           </div>

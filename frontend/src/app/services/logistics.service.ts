@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { functions } from '../app.firebase';
-import { httpsCallable } from 'firebase/functions';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface OptimizationRequest {
     orders: any[];
@@ -15,11 +15,15 @@ export interface OptimizationRequest {
 })
 export class LogisticsService {
     private http = inject(HttpClient);
+    private readonly API_URL = `${environment.apiUrl}/logistics`;
+
+    private getHeaders() {
+        const token = localStorage.getItem('token');
+        return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    }
 
     async optimizeRoutes(request: OptimizationRequest) {
-        // Uso de HTTPS Callable de Firebase para optimización de rutas
-        const optimizeFn = httpsCallable(functions, 'optimizeLogistics');
-        const response = await optimizeFn(request);
-        return response.data;
+        const response = await firstValueFrom(this.http.post<any>(`${this.API_URL}/optimize`, request, { headers: this.getHeaders() }));
+        return response;
     }
 }

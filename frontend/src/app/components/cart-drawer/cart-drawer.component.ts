@@ -2,11 +2,12 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { CartStore } from '../../store/cart.store';
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 
 @Component({
   selector: 'app-cart-drawer',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ImageUrlPipe],
   template: `
     <!-- Overlay -->
     <div class="cart-overlay" *ngIf="cart.isOpen()" (click)="cart.closeCart()"></div>
@@ -28,7 +29,7 @@ import { CartStore } from '../../store/cart.store';
         <ul class="cart-items" *ngIf="cart.items().length > 0">
           <li *ngFor="let item of cart.items()" class="cart-item fade-in">
             <div class="item-img">
-              <img [src]="item.product.local_image_path || 'assets/images/placeholder.jpg'" 
+              <img [src]="item.product.local_image_path | imageUrl" 
                    [alt]="item.product.name"
                    (error)="onImgError($event)">
             </div>

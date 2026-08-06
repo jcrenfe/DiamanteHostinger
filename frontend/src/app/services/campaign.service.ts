@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { db, functions } from '../app.firebase';
-import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Campaign {
     id?: string;
@@ -31,32 +30,40 @@ export interface UserRecipient {
 })
 export class CampaignService {
     private http = inject(HttpClient);
+    private readonly API_URL = `${environment.apiUrl}/campaign`;
+    
+    // We will assume a users API exists to fetch clients
+    private readonly USERS_URL = `${environment.apiUrl}/users`;
+
+    private getHeaders() {
+        const token = localStorage.getItem('token');
+        return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    }
 
     async loadCampaigns(): Promise<Campaign[]> {
-        const snap = await getDocs(collection(db, 'campañas'));
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Campaign);
+        try {
+            return await firstValueFrom(this.http.get<Campaign[]>(this.API_URL, { headers: this.getHeaders() }));
+        } catch (e) {
+            return [];
+        }
     }
 
     async saveCampaign(campaign: Campaign): Promise<string> {
         if (campaign.id) {
-            await updateDoc(doc(db, 'campañas', campaign.id), { ...campaign });
+            await firstValueFrom(this.http.put(`${this.API_URL}/${campaign.id}`, campaign, { headers: this.getHeaders() }));
             return campaign.id;
         } else {
-            const newDoc = doc(collection(db, 'campañas'));
-            const id = newDoc.id;
-            await setDoc(newDoc, { ...campaign, id, createdAt: serverTimestamp() });
-            return id;
+            const res = await firstValueFrom(this.http.post<Campaign>(this.API_URL, campaign, { headers: this.getHeaders() }));
+            return res.id!;
         }
     }
 
     async deleteCampaign(id: string) {
-        await deleteDoc(doc(db, 'campañas', id));
+        await firstValueFrom(this.http.delete(`${this.API_URL}/${id}`, { headers: this.getHeaders() }));
     }
 
     async sendCampaign(campaign: Campaign, recipients: string[]) {
-        // Uso de HTTPS Callable para envío masivo de campañas
-        const sendFn = httpsCallable(functions, 'sendCampaign');
-        const response = await sendFn({
+        const payload = {
             campaignId: campaign.id,
             header: campaign.header,
             summary: campaign.summary,
@@ -64,27 +71,18 @@ export class CampaignService {
             cta: campaign.cta,
             image: campaign.image,
             recipients: recipients
-        });
-        return response.data;
+        };
+        const response = await firstValueFrom(this.http.post<any>(`${this.API_URL}/send-bulk`, payload, { headers: this.getHeaders() }));
+        return response;
     }
 
     async getClientUsers(): Promise<UserRecipient[]> {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        const users: UserRecipient[] = [];
-        usersSnap.forEach(doc => {
-            const data = doc.data();
-            // SOLO CLIENTES (excluir administradores)
-            if (data['email'] && data['role'] !== 'admin') {
-                users.push({
-                    id: doc.id,
-                    email: data['email'],
-                    name: data['name'] || data['displayName'] || data['nombre'] || 'Cliente',
-                    role: data['role'] || 'cliente',
-                    selected: true
-                });
-            }
-        });
-        return users;
+        try {
+            const users = await firstValueFrom(this.http.get<UserRecipient[]>(`${this.USERS_URL}/clients`, { headers: this.getHeaders() }));
+            return users.map(u => ({ ...u, selected: true }));
+        } catch (e) {
+            return [];
+        }
     }
 
     async getSubscribersEmails(): Promise<string[]> {

@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { CampaignService, Campaign, UserRecipient } from '../../services/campaign.service';
 import { ToastService } from '../../services/toast.service';
 import { ConfirmDialogService } from '../../services/confirm-dialog.service';
-import { db, storage } from '../../app.firebase';
-import { ref, uploadBytesResumable, getDownloadURL, UploadTask } from 'firebase/storage';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ImageOptimizerService } from '../../services/image-optimizer.service';
 
 @Component({
@@ -452,7 +453,7 @@ export class CampaignManagerComponent implements OnInit {
     return this.clientUsers().filter(u => u.selected).length;
   });
 
-  private currentUploadTask: UploadTask | null = null;
+  private http = inject(HttpClient);
   private toastService = inject(ToastService);
   private confirmDialogService = inject(ConfirmDialogService);
   private imageOptimizer = inject(ImageOptimizerService);
@@ -574,43 +575,28 @@ export class CampaignManagerComponent implements OnInit {
 
       const optimizedBlob = await this.imageOptimizer.optimize(file, 1600, 0.70);
 
-      const fileName = `${Date.now()}_${file.name.split('.')[0]}.webp`;
-      const storageRef = ref(storage, `campanas/${fileName}`);
+      const formData = new FormData();
+      formData.append('image', optimizedBlob, `${Date.now()}_${file.name.split('.')[0]}.webp`);
 
-      this.currentUploadTask = uploadBytesResumable(storageRef, optimizedBlob, { contentType: 'image/webp' });
+      const progressInterval = setInterval(() => {
+          this.zone.run(() => {
+              let current = this.uploadProgress();
+              if (current < 90) this.uploadProgress.set(current + 10);
+          });
+      }, 200);
 
-      this.currentUploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          this.zone.run(() => {
-            this.uploadProgress.set(Math.round(progress));
-          });
-        },
-        (error) => {
-          this.zone.run(() => {
-            if (error.code === 'storage/canceled') {
-              this.toastService.info('Carga cancelada');
-            } else {
-              let msg = `Fallo de subida: ${error.message}`;
-              if (window.location.hostname === 'localhost') {
-                msg += '. Revisa los permisos CORS de Firebase Storage.';
-              }
-              this.toastService.error(msg);
-            }
-            this.isUploading.set(false);
-            this.currentUploadTask = null;
-          });
-        },
-        async () => {
-          const url = await getDownloadURL(this.currentUploadTask!.snapshot.ref);
-          this.zone.run(() => {
-            this.currentCamp.image = url;
-            this.toastService.success('Imagen de campaña optimizada y subida');
-            this.isUploading.set(false);
-            this.currentUploadTask = null;
-          });
-        }
-      );
+      const token = localStorage.getItem('token');
+      const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+      const response = await firstValueFrom(this.http.post<any>(`${environment.apiUrl}/upload`, formData, { headers }));
+      
+      clearInterval(progressInterval);
+      this.uploadProgress.set(100);
+
+      this.zone.run(() => {
+          this.currentCamp.image = response.url;
+          this.toastService.success('Imagen de campaña optimizada y subida');
+          this.isUploading.set(false);
+      });
 
     } catch (e: any) {
       this.toastService.error(`Fallo de carga: ${e.message || 'Error desconocido'}`);
@@ -619,11 +605,7 @@ export class CampaignManagerComponent implements OnInit {
   }
 
   cancelUpload() {
-    if (this.currentUploadTask) {
-      this.currentUploadTask.cancel();
-      this.isUploading.set(false);
-      this.currentUploadTask = null;
-    }
+    this.isUploading.set(false);
   }
 
   getStatusLabel(status: string): string {

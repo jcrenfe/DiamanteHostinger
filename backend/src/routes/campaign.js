@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
-const admin = require('firebase-admin');
+const prisma = require('../config/prisma');
 
 // Configure Nodemailer (reusing same config as contact.js ideally via a shared utility, 
 // but for target simplicity we'll redefine or just use process.env)
@@ -94,12 +94,15 @@ router.post('/send-bulk', async (req, res) => {
 
         await Promise.all(sendPromises);
 
-        // Update campaign status in firestore if campaignId exists
+        // Update campaign status in database if campaignId exists
         if (campaignId) {
-            await admin.firestore().collection('campañas').doc(campaignId).update({
-                sentCount: recipients.length,
-                status: 'completed',
-                lastSentAt: admin.firestore.FieldValue.serverTimestamp()
+            await prisma.campaign.update({
+                where: { id: campaignId },
+                data: {
+                    sentCount: recipients.length,
+                    status: 'completed',
+                    lastSentAt: new Date()
+                }
             });
         }
 

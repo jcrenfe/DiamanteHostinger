@@ -4,16 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { OfferService, Offer } from '../../services/offer.service';
 import { ToastService } from '../../services/toast.service';
 import { ConfirmDialogService } from '../../services/confirm-dialog.service';
-import { db, storage } from '../../app.firebase';
-import { collection, getDocs } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, UploadTask } from 'firebase/storage';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ImageOptimizerService } from '../../services/image-optimizer.service';
-
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 
 @Component({
   selector: 'app-offer-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ImageUrlPipe],
   template: `
     <div class="offer-manager">
       <div class="header-actions">
@@ -22,8 +22,22 @@ import { ImageOptimizerService } from '../../services/image-optimizer.service';
       </div>
 
       <div class="offers-grid mt-4">
-        <div class="offer-card shadow-sm fade-in" *ngFor="let offer of offerService.offers()" [class.inactive]="!offer.active">
-          <div class="card-badge" [class]="offer.type">{{ offer.type.replace('_', ' ') }}</div>
+        <div class="offer-card shadow-sm fade-in" *ngFor="let offer of offerService.offers()" 
+             [class.inactive]="!offer.active"
+             [class.has-bg]="offer.backgroundColor || offer.backgroundImage"
+             [ngStyle]="{
+               'background-image': offer.backgroundImage ? 'url(' + (offer.backgroundImage | imageUrl) + ')' : 'none',
+               'background-color': offer.backgroundColor || 'white',
+               'background-size': 'cover',
+               'background-position': 'center'
+             }">
+          <div class="card-badge" [class]="offer.type"
+               [ngStyle]="{
+                 'background-color': offer.ribbonColor || '',
+                 'color': offer.ribbonTextColor || ''
+               }">
+            {{ offer.ribbonText || offer.type.replace('_', ' ') }}
+          </div>
           <div class="offer-info">
             <h3>{{ offer.title }}</h3>
             <p>{{ offer.description }}</p>
@@ -154,17 +168,27 @@ import { ImageOptimizerService } from '../../services/image-optimizer.service';
     .card-badge.coupon { background: #10b981; }
     .card-badge.product_deal { background: #f59e0b; }
 
-    .offer-info { padding: 2rem; flex: 1; }
+    .offer-info { padding: 2rem; flex: 1; position: relative; z-index: 2; }
     .offer-info h3 { color: var(--primary); margin-bottom: 0.5rem; }
     .offer-info p { font-size: 0.9rem; color: #666; margin-bottom: 1rem; }
-    .discount { font-size: 2rem; font-weight: 800; color: var(--accent); }
-    .promo-code { display: inline-block; padding: 0.3rem 0.8rem; background: #f3f4f6; border: 1px dashed #d1d5db; border-radius: 6px; font-weight: 600; font-family: monospace; }
     
-    .card-footer { padding: 1rem 2rem; background: #f9fafb; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .offer-card.has-bg .offer-info h3, 
+    .offer-card.has-bg .offer-info p {
+      color: white !important;
+      text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+    }
+    .offer-card.has-bg .discount {
+      text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+    }
+
+    .discount { font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .promo-code { display: inline-block; padding: 0.3rem 0.8rem; background: #f3f4f6; border: 1px dashed #d1d5db; border-radius: 6px; font-weight: 600; font-family: monospace; color: #333; }
+    
+    .card-footer { padding: 1rem 2rem; background: rgba(249, 250, 251, 0.9); border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; backdrop-filter: blur(4px); }
     .status { font-size: 0.8rem; font-weight: 600; }
     .actions { display: flex; gap: 0.5rem; }
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0.4rem; border-radius: 6px; transition: 0.3s; }
-    .btn-icon:hover { background: #f0f0f0; }
+    .btn-icon:hover { background: rgba(0,0,0,0.1); }
 
     .admin-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 3000; }
     .modal-content { background: white; padding: 2.5rem; border-radius: 16px; width: 100%; max-width: 500px; }
@@ -186,18 +210,23 @@ export class OfferManagerComponent implements OnInit {
   private confirmDialogService = inject(ConfirmDialogService);
   private imageOptimizer = inject(ImageOptimizerService);
   private zone = inject(NgZone);
+  private http = inject(HttpClient);
 
   isModalOpen = signal(false);
   isUploading = signal(false);
   uploadProgress = signal(0);
-  private currentUploadTask: UploadTask | null = null;
   currentOffer: Partial<Offer> = {};
   products: any[] = [];
 
   async ngOnInit() {
     this.offerService.loadOffers();
-    const snap = await getDocs(collection(db, 'productos'));
-    this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+        const token = localStorage.getItem('token');
+        const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+        this.products = await firstValueFrom(this.http.get<any[]>(`${environment.apiUrl}/products`, { headers })) || [];
+    } catch(e) {
+        this.products = [];
+    }
   }
 
   openModal() {
@@ -232,43 +261,28 @@ export class OfferManagerComponent implements OnInit {
 
       const optimizedBlob = await this.imageOptimizer.optimize(file, 1600, 0.70);
 
-      const fileName = `${Date.now()}_${file.name.split('.')[0]}.webp`;
-      const storageRef = ref(storage, `ofertas/${fileName}`);
+      const formData = new FormData();
+      formData.append('image', optimizedBlob, `${Date.now()}_${file.name.split('.')[0]}.webp`);
 
-      this.currentUploadTask = uploadBytesResumable(storageRef, optimizedBlob, { contentType: 'image/webp' });
+      const progressInterval = setInterval(() => {
+          this.zone.run(() => {
+              let current = this.uploadProgress();
+              if (current < 90) this.uploadProgress.set(current + 10);
+          });
+      }, 200);
 
-      this.currentUploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          this.zone.run(() => {
-            this.uploadProgress.set(Math.round(progress));
-          });
-        },
-        (error) => {
-          this.zone.run(() => {
-            if (error.code === 'storage/canceled') {
-              this.toastService.info('Carga cancelada');
-            } else {
-              let msg = `Fallo de subida: ${error.message}`;
-              if (window.location.hostname === 'localhost') {
-                msg += '. Revisa la configuración de CORS en tu bucket de Firebase.';
-              }
-              this.toastService.error(msg);
-            }
-            this.isUploading.set(false);
-            this.currentUploadTask = null;
-          });
-        },
-        async () => {
-          const url = await getDownloadURL(this.currentUploadTask!.snapshot.ref);
-          this.zone.run(() => {
-            this.currentOffer.backgroundImage = url;
-            this.toastService.success('Imagen de oferta optimizada y subida');
-            this.isUploading.set(false);
-            this.currentUploadTask = null;
-          });
-        }
-      );
+      const token = localStorage.getItem('token');
+      const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+      const response = await firstValueFrom(this.http.post<any>(`${environment.apiUrl}/upload`, formData, { headers }));
+      
+      clearInterval(progressInterval);
+      this.uploadProgress.set(100);
+
+      this.zone.run(() => {
+          this.currentOffer.backgroundImage = response.url;
+          this.toastService.success('Imagen de oferta optimizada y subida');
+          this.isUploading.set(false);
+      });
 
     } catch (e: any) {
       this.toastService.error(`Fallo de carga: ${e.message || 'Error desconocido'}`);
@@ -277,11 +291,7 @@ export class OfferManagerComponent implements OnInit {
   }
 
   cancelUpload() {
-    if (this.currentUploadTask) {
-      this.currentUploadTask.cancel();
-      this.isUploading.set(false);
-      this.currentUploadTask = null;
-    }
+    this.isUploading.set(false);
   }
 
   async saveOffer() {
