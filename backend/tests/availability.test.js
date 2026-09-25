@@ -15,7 +15,7 @@ const stubModule = (file, exports) => {
 };
 
 // ---------- Prisma simulado (en memoria) ----------
-const db = { config: null, orders: [] };
+const db = { config: null, orders: [], items: [] };
 const locks = new Map(); // exclusión mutua por nombre, equivalente a GET_LOCK dentro de un proceso
 const tick = () => new Promise(r => setImmediate(r));
 const matches = (row, where = {}) => Object.entries(where).every(([k, v]) => row[k] === v);
@@ -27,6 +27,10 @@ stubModule(src('config', 'prisma.js'), {
     order: {
         findMany: async ({ where } = {}) => { const rows = db.orders.filter(o => matches(o, where)); await tick(); return rows; },
         create: async ({ data }) => { await tick(); const o = { id: `o${db.orders.length + 1}`, ...data }; db.orders.push(o); return o; }
+    },
+    orderItem: {
+        findMany: async ({ where } = {}) => db.items.filter(o => matches(o, where)),
+        create: async ({ data }) => { const it = { id: db.items.length + 1, ...data }; db.items.push(it); return it; }
     },
     $withLock: async (name, _t, fn) => {
         const prev = locks.get(name) || Promise.resolve();
@@ -41,9 +45,30 @@ stubModule(src('services', 'emailService.js'), { sendOrderConfirmationEmail: asy
 // Google Maps simulado
 let route = { minutes: 10, km: 5 };
 let geocodeOk = true;
-axios.get = async () => geocodeOk
-    ? { data: { status: 'OK', results: [{ formatted_address: 'X', geometry: { location: { lat: 1, lng: 1 } } }] } }
-    : { data: { status: 'ZERO_RESULTS', results: [] } };
+let geocodeApprox = false; // Google solo localiza la ciudad/CP (calle inventada)
+let destType = ['street_address']; // tipo con el que Google interpreta la dirección de destino
+// Geocoding API: localiza la dirección (puede devolverla corregida)
+let geoResult = null; // sustituye a la respuesta por defecto cuando no es null
+const okResult = (over = {}) => ({
+    formatted_address: 'C. Uno, 1, 28001 Madrid, España',
+    types: ['street_address'],
+    address_components: [
+        { long_name: '1', types: ['street_number'] },
+        { long_name: 'Calle Uno', types: ['route'] },
+        { long_name: 'Madrid', types: ['locality'] },
+        { long_name: '28001', types: ['postal_code'] }
+    ],
+    geometry: { location: { lat: 1, lng: 1 } },
+    ...over
+});
+axios.get = async () => {
+    if (geoResult) return { data: geoResult };
+    if (!geocodeOk) return { data: { status: 'ZERO_RESULTS', results: [] } };
+    return { data: { status: 'OK', results: [geocodeApprox
+        ? okResult({ types: ['postal_code'], partial_match: true, address_components: [{ long_name: '28001', types: ['postal_code'] }] })
+        : okResult({ types: destType })] } };
+};
+// Routes API (computeRouteMatrix): distancia y duración
 axios.post = async () => ({ data: [{ distanceMeters: route.km * 1000, duration: `${route.minutes * 60}s` }] });
 
 const ordersRoutes = require(src('routes', 'orders.js'));
@@ -61,7 +86,7 @@ test.before(async () => {
     base = `http://127.0.0.1:${server.address().port}/api`;
 });
 test.after(() => server.close());
-test.beforeEach(() => { db.config = null; db.orders = []; route = { minutes: 10, km: 5 }; geocodeOk = true; });
+test.beforeEach(() => { db.config = null; db.orders = []; db.items = []; route = { minutes: 10, km: 5 }; geocodeOk = true; });
 
 const token = (role, uid = 'u1') => jwt.sign({ uid, role, email: `${uid}@x.com` }, process.env.JWT_SECRET);
 const call = (method, url, { body, auth } = {}) => fetch(base + url, {
@@ -261,10 +286,70 @@ test('dirección inexistente: se rechaza con address_not_found', async () => {
     assert.deepEqual([r.valid, r.reason], [false, 'address_not_found']);
 });
 
-test('sin dirección de origen configurada no se bloquea al cliente (fail-open)', async () => {
+test('calle inventada: Google solo localiza la ciudad/CP y se rechaza con address_not_found', async () => {
+    db.config = baseConfig();
+    geocodeApprox = true;
+    try {
+        const r = await check();
+        assert.deepEqual([r.valid, r.reason], [false, 'address_not_found']);
+    } finally { geocodeApprox = false; }
+});
+
+test('dirección que Google devuelve igual que la escrita: se muestra normalizada y sin aviso de corrección', async () => {
+    db.config = baseConfig();
+    const r = await check();
+    assert.deepEqual([r.valid, r.formattedAddress, r.addressCorrected], [true, 'C. Uno, 1, 28001 Madrid, España', false]);
+});
+
+test('errata en la calle que Google corrige ("Calle Un" → "Calle Uno"): se acepta y se avisa de la corrección', async () => {
+    db.config = baseConfig();
+    const r = await checkDeliveryDistance({ address: 'Calle Un 1', city: 'Madrid', zip: '28001' });
+    assert.deepEqual([r.valid, r.addressCorrected], [true, true]);
+});
+
+test('el pedido guarda la dirección corregida por Google y conserva la que escribió el cliente', async () => {
+    db.config = baseConfig();
+    const body = newOrder('2099-03-03', '10:00');
+    body.delivery = { ...body.delivery, address: 'Calle Un 1', city: 'Madrid', zip: '09001' };
+    const res = await call('POST', '/orders', { body });
+    assert.equal(res.status, 200);
+    const o = db.orders[0];
+    assert.deepEqual([o.delivery_address, o.delivery_city, o.delivery_zip], ['Calle Uno, 1', 'Madrid', '28001']);
+    assert.equal(o.delivery_addressOriginal, 'Calle Un 1, 09001, Madrid');
+});
+
+test('si Google no corrige nada no se guarda dirección original', async () => {
+    db.config = baseConfig();
+    const res = await call('POST', '/orders', { body: newOrder('2099-03-03', '10:00') });
+    assert.equal(res.status, 200);
+    assert.equal(db.orders[0].delivery_addressOriginal, null);
+});
+
+test('código postal equivocado que Google cambia: se acepta y se avisa de la corrección', async () => {
+    db.config = baseConfig();
+    const r = await checkDeliveryDistance({ address: 'C/ Uno 1', city: 'Madrid', zip: '09001' });
+    assert.deepEqual([r.valid, r.addressCorrected], [true, true]);
+});
+
+test('abreviar el tipo de vía ("Cl." en lugar de "Calle") no cuenta como corrección', async () => {
+    db.config = baseConfig();
+    const r = await checkDeliveryDistance({ address: 'Cl. Uno, 1', city: 'madrid', zip: '28001' });
+    assert.equal(r.addressCorrected, false);
+});
+
+test('sin dirección de origen configurada la dirección se verifica igualmente (sin radio que aplicar)', async () => {
     db.config = { ...baseConfig(), originAddress: '' };
     const r = await check();
-    assert.deepEqual([r.valid, r.checked], [true, false]);
+    assert.deepEqual([r.valid, r.checked, r.reason], [true, true, 'no_origin_configured']);
+});
+
+test('dirección sin número de portal (Google devuelve solo la calle): se rechaza como incompleta', async () => {
+    db.config = baseConfig();
+    destType = ['route'];
+    try {
+        const r = await check();
+        assert.deepEqual([r.valid, r.reason], [false, 'address_not_found']);
+    } finally { destType = ['street_address']; }
 });
 
 test('configuración antigua sin umbrales/recargos usa los valores por defecto', async () => {
@@ -331,15 +416,16 @@ test('retención: /orders/occupancy no lista los pedidos sin pagar caducados', a
     assert.deepEqual(res.map(o => o.timeSlot), ['10:00']);
 });
 
-test('si Google Geocoding falla por facturación/clave (REQUEST_DENIED) NO se bloquea al cliente: se acepta sin comprobar (fail-open)', async () => {
+test('si la Routes API de Google falla (REQUEST_DENIED) el pedido NO se acepta: la dirección no se puede verificar (fail-closed)', async () => {
     db.config = baseConfig();
     const original = axios.get;
     axios.get = async () => ({ data: { status: 'REQUEST_DENIED', error_message: 'You must enable Billing' } });
     try {
         const r = await check();
-        assert.deepEqual([r.valid, r.checked, r.reason], [true, false, 'geocode_unavailable']);
+        assert.deepEqual([r.valid, r.checked, r.reason], [false, false, 'check_unavailable']);
         const res = await call('POST', '/orders', { body: newOrder('2099-03-03', '10:00') });
-        assert.equal(res.status, 200);
+        assert.equal(res.status, 422);
+        assert.equal(db.orders.length, 0);
     } finally { axios.get = original; }
 });
 
@@ -348,4 +434,36 @@ test('una dirección que Google no encuentra (ZERO_RESULTS) sigue rechazándose 
     geocodeOk = false;
     const r = await check();
     assert.deepEqual([r.valid, r.reason], [false, 'address_not_found']);
+});
+
+// ---------------------------------------------------------------- Mis pedidos: líneas y propiedad
+test('al crear un pedido se guardan sus líneas y el pedido las devuelve al listarlo', async () => {
+    db.config = baseConfig();
+    const items = [{ product: { id: 'p1', name: 'DESAYUNO CON DIAMANTES', price: 35 }, quantity: 2 }, { product: { id: 'p2', name: 'GLOBO ADICIONAL', price: 5.5 }, quantity: 1 }];
+    const res = await call('POST', '/orders', { body: newOrder('2099-03-03', '10:00', { items }), auth: token('cliente', 'u1') });
+    assert.equal(res.status, 200);
+    assert.equal(db.items.length, 2);
+    const list = await (await call('GET', '/orders?mine=1', { auth: token('cliente', 'u1') })).json();
+    assert.equal(list.length, 1);
+    assert.deepEqual(list[0].items.map(i => [i.name, i.quantity, i.price]), [['DESAYUNO CON DIAMANTES', 2, 35], ['GLOBO ADICIONAL', 1, 5.5]]);
+});
+
+test('el pedido queda asociado al usuario del TOKEN, no al uid que diga el cuerpo de la petición', async () => {
+    db.config = baseConfig();
+    await call('POST', '/orders', { body: newOrder('2099-03-03', '10:00', { customer: { uid: 'otra-persona', name: 'A', email: 'a@a.com', phone: '600000000' } }), auth: token('cliente', 'u1') });
+    assert.equal(db.orders[0].customer_uid, 'u1');
+});
+
+test('un pedido de invitado (sin token) se guarda sin usuario', async () => {
+    db.config = baseConfig();
+    await call('POST', '/orders', { body: newOrder('2099-03-03', '10:00') });
+    assert.equal(db.orders[0].customer_uid, null);
+});
+
+test('GET /orders?mine=1: un administrador recibe solo sus pedidos; sin mine recibe todos', async () => {
+    db.orders = [{ id: 'a', customer_uid: 'adm', delivery_date: '2099-03-03' }, { id: 'b', customer_uid: 'u2', delivery_date: '2099-03-03' }];
+    const mine = await (await call('GET', '/orders?mine=1', { auth: token('admin', 'adm') })).json();
+    assert.deepEqual(mine.map(o => o.id), ['a']);
+    const all = await (await call('GET', '/orders', { auth: token('admin', 'adm') })).json();
+    assert.deepEqual(all.map(o => o.id).sort(), ['a', 'b']);
 });

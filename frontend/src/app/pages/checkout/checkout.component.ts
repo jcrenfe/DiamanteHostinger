@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { ToastService } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { CartStore } from '../../store/cart.store';
 import { AuthStore } from '../../store/auth.store';
 import { OrderService, OrderData, DeliveryCheckResult } from '../../services/order.service';
@@ -36,6 +36,14 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
           <div class="form-section stripe-embedded-card" *ngIf="showStripeCheckout(); else orderFormBlock">
             <h3 class="title-font mb-2">Pasarela de Pago Segura</h3>
             <p class="text-muted mb-4">Completa el pago con tarjeta para finalizar tu pedido <strong>#{{ orderId() }}</strong>.</p>
+            <div class="delivery-data-box">
+              <h4>¡Atención! Estos son los datos de entrega</h4>
+              <p class="corrected-warning" *ngIf="deliveryCheck()?.addressCorrected">✏️ Hemos corregido tu dirección, compruébala por favor.</p>
+              <p><strong>Dirección:</strong> {{ deliveryCheck()?.formattedAddress || (checkoutForm.value.address + ', ' + checkoutForm.value.city + ' (' + checkoutForm.value.zip + ')') }}</p>
+              <p *ngIf="checkoutForm.value.addressExtra"><strong>Piso / puerta:</strong> {{ checkoutForm.value.addressExtra }}</p>
+              <p><strong>Teléfono:</strong> {{ checkoutForm.value.phone }}</p>
+              <small>También los recibirás por correo. Si hay algún error, podrás comunicárnoslo respondiendo a ese correo.</small>
+            </div>
             <div id="stripe-checkout-element"></div>
           </div>
 
@@ -67,6 +75,10 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
                   <label>Dirección de Envío</label>
                   <input type="text" formControlName="address" placeholder="Calle, número, piso..." (blur)="checkAddress()">
                 </div>
+                <div class="form-group">
+                  <label>Piso / puerta / escalera <span class="text-muted">(opcional)</span></label>
+                  <input type="text" formControlName="addressExtra" placeholder="Ej. 2º B, escalera izquierda">
+                </div>
                 <div class="form-row">
                   <div class="form-group">
                     <label>Ciudad</label>
@@ -84,6 +96,9 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
                 <div class="delivery-check-status ok" *ngIf="!checkingAddress() && deliveryCheck()?.checked && deliveryCheck()?.valid">
                   <small *ngIf="(deliveryCheck()!.surchargeAmount || 0) > 0">🚚 Se aplicará un incremento por desplazamiento de {{ deliveryCheck()!.surchargeAmount | number:'1.2-2' }}€.</small>
                   <small *ngIf="!(deliveryCheck()!.surchargeAmount || 0)">✅ Dirección dentro de nuestro radio de reparto.</small>
+                </div>
+                <div class="delivery-check-status corrected" *ngIf="!checkingAddress() && deliveryCheck()?.valid && deliveryCheck()?.addressCorrected">
+                  <small>✏️ Hemos corregido tu dirección, compruébala por favor: <strong>{{ deliveryCheck()!.formattedAddress }}</strong></small>
                 </div>
                 <div class="delivery-check-status error" *ngIf="!checkingAddress() && deliveryCheck() && deliveryCheck()!.valid === false">
                   <small>⚠️ {{ deliveryCheckErrorMessage() }}</small>
@@ -225,9 +240,15 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
       transition: border-color 0.3s;
     }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--secondary); }
+    .delivery-data-box { background: #fff8e6; border: 1px solid #f0c36d; border-left: 4px solid #e67e22; border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+    .delivery-data-box h4 { margin: 0 0 0.6rem; color: #8b4513; font-size: 1.05rem; }
+    .delivery-data-box p { margin: 0 0 0.3rem; }
+    .delivery-data-box small { display: block; margin-top: 0.5rem; color: var(--text-muted); }
     .delivery-check-status { margin-top: -0.8rem; margin-bottom: 1.5rem; font-size: 0.85rem; }
     .delivery-check-status.checking { color: var(--text-muted); }
     .delivery-check-status.ok { color: #1e7e34; }
+    .delivery-check-status.corrected { color: #8a5a00; background: #fff3cd; border-radius: 6px; padding: 0.5rem 0.7rem; }
+    .delivery-data-box .corrected-warning { color: #8a5a00; font-weight: 600; }
     .delivery-check-status.error { color: #c0392b; font-weight: 600; }
     .surcharge-item .item-name { color: var(--secondary); font-style: italic; }
     .surcharge-item .item-price { color: var(--secondary); }
@@ -349,7 +370,6 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
 export class CheckoutComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private router = inject(Router);
-  private route = inject(ActivatedRoute);
   cart = inject(CartStore);
   private orderService = inject(OrderService);
   private authStore = inject(AuthStore);
@@ -376,6 +396,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     email: ['', [Validators.required, Validators.email]],
     phone: ['', [Validators.required, Validators.pattern(/^[0-9]{9,}$/)]],
     address: ['', [Validators.required]],
+    addressExtra: [''],
     city: ['', [Validators.required]],
     zip: ['', [Validators.required]],
     date: ['', [Validators.required]],
@@ -435,80 +456,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     }, 5000) as any;
   }
 
-  async ngOnInit() {
-    const routeOrderId = this.route.snapshot.queryParams['orderId'];
-    if (routeOrderId) {
-      this.isSubmitting.set(true);
-      const existingOrder = await this.orderService.getOrderById(routeOrderId);
-      if (existingOrder) {
-        if (existingOrder.status === 'cancelled') {
-          this.isSubmitting.set(false);
-          await this.confirmDialog.open({
-            title: '🔴 Pedido Cancelado',
-            message: 'El plazo para completar el pago de este pedido ha expirado o se ha cancelado tras alcanzar el máximo de intentos fallidos.',
-            confirmText: 'Entendido',
-            cancelText: '',
-            type: 'danger'
-          });
-          this.router.navigate(['/productos']);
-          return;
-        }
-
-        if (existingOrder.status === 'paid') {
-          this.router.navigate(['/checkout/success'], { queryParams: { order_id: routeOrderId } });
-          return;
-        }
-
-        // Recuperación de pedido pendiente
-        const cust = existingOrder.customer || {};
-        const deliv = existingOrder.delivery || {};
-
-        this.checkoutForm.patchValue({
-          name: cust.name || '',
-          email: cust.email || '',
-          phone: cust.phone || '',
-          address: deliv.address || '',
-          city: deliv.city || '',
-          zip: deliv.zip || '',
-          date: deliv.date || '',
-          timeSlot: deliv.timeSlot || '',
-          message: deliv.message || ''
-        });
-
-        if (deliv.date) {
-          const slots = await this.appointmentService.getAvailableSlots(deliv.date);
-          this.availableSlots.set(slots);
-          this.checkoutForm.get('timeSlot')?.setValue(deliv.timeSlot || '');
-        }
-
-        if (existingOrder.items && existingOrder.items.length > 0 && this.cart.items().length === 0) {
-          this.cart.setItems(existingOrder.items);
-        }
-
-        const idToUse = existingOrder.redsysOrderId || existingOrder.id;
-        this.orderId.set(idToUse);
-        this.listenToOrderStatus(existingOrder.id || idToUse);
-        this.isSubmitting.set(false);
-
-        // Intentar montar la pasarela directamente
-        const paymentParams: any = await this.orderService.initPayment(existingOrder.total, idToUse);
-        if (paymentParams && paymentParams.clientSecret) {
-          if (paymentParams.sessionId) {
-            this.sessionId.set(paymentParams.sessionId);
-            this.startStripeStatusPolling();
-          }
-          this.showStripeCheckout.set(true);
-          setTimeout(() => this.mountStripe(paymentParams.clientSecret), 150);
-        } else if (paymentParams?.reason === 'slot_unavailable') {
-          this.toastService.error('La hora de entrega de este pedido ya no está disponible. Haz un nuevo pedido eligiendo otra hora.');
-        }
-      } else {
-        this.isSubmitting.set(false);
-      }
-    } else {
-      if (this.cart.items().length === 0) {
-        this.router.navigate(['/productos']);
-      }
+  ngOnInit() {
+    if (this.cart.items().length === 0) {
+      this.router.navigate(['/productos']);
     }
   }
 
@@ -553,7 +503,10 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     const check = this.deliveryCheck();
     if (!check) return '';
     if (check.reason === 'address_not_found') {
-      return 'No hemos podido localizar esa dirección. Revísala e inténtalo de nuevo.';
+      return 'No hemos podido localizar esa dirección. Revisa que la calle, el número, la ciudad y el código postal sean correctos.';
+    }
+    if (check.reason === 'check_unavailable') {
+      return 'No hemos podido verificar tu dirección en este momento. Inténtalo de nuevo en unos minutos.';
     }
     if (check.reason === 'too_far') {
       return `Tu dirección está a ${check.durationMinutes} min de trayecto, fuera de nuestro radio de reparto (máx. ${check.maxDeliveryMinutes} min).`;
@@ -751,7 +704,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         phone: formVal.phone
       },
       delivery: {
-        address: formVal.address, city: formVal.city, zip: formVal.zip,
+        address: formVal.address, addressExtra: formVal.addressExtra, city: formVal.city, zip: formVal.zip,
         date: formVal.date, timeSlot: formVal.timeSlot, message: formVal.message
       },
       items: this.cart.items(),
@@ -798,7 +751,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
           await this.handlePaymentFailure(orderIdToPay);
         }
       } else {
-        if (result.reason === 'too_far' || result.reason === 'address_not_found') {
+        if (result.reason === 'too_far' || result.reason === 'address_not_found' || result.reason === 'check_unavailable') {
           this.toastService.error(result.message || 'Tu dirección está fuera de nuestro radio de reparto.');
         } else if (result.reason === 'slot_unavailable') {
           this.toastService.error(result.message || 'La hora de entrega elegida ya no está disponible. Elige otra.');

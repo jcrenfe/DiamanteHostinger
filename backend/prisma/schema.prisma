@@ -65,6 +65,8 @@ model Order {
   delivery_address      String
   delivery_city         String
   delivery_zip          String
+  delivery_addressOriginal String? @db.Text
+  delivery_addressExtra String?
   delivery_date         String
   delivery_timeSlot     String
   delivery_message      String?  @db.Text

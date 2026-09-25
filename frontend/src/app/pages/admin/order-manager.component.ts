@@ -102,7 +102,7 @@ export interface StatusFilterOption {
           <div class="order-body">
             <div class="customer-info">
               <p>👤 <strong>{{ order.customer_name }}</strong> ({{ order.customer_email }})</p>
-              <p>📍 {{ order.delivery_address }}, {{ order.delivery_city }} ({{ order.delivery_zip }})</p>
+              <p>📍 {{ order.delivery_address }}, {{ order.delivery_city }} ({{ order.delivery_zip }})<span *ngIf="order.delivery_addressExtra"> · {{ order.delivery_addressExtra }}</span></p>
               <p *ngIf="order.delivery_durationMin != null">🚗 {{ order.delivery_durationMin }} min · {{ order.delivery_distanceKm }} km desde el origen</p>
               <p *ngIf="order.delivery_surchargeAmount > 0">🚚 Incremento por desplazamiento: <strong>{{ order.delivery_surchargeAmount | number:'1.2-2' }}€</strong></p>
               <p>📅 Entrega: <strong>{{ order.delivery_date }}</strong> - {{ order.delivery_timeSlot }}</p>
@@ -112,7 +112,7 @@ export interface StatusFilterOption {
             <div class="items-list">
               <ul>
                 <li *ngFor="let item of order.items">
-                  {{ item.quantity }}x {{ item.product.name }}
+                  {{ item.quantity }}x {{ item.name || item.product?.name }}
                 </li>
               </ul>
             </div>
@@ -210,6 +210,9 @@ export interface StatusFilterOption {
     .chip-paid.active { background: #d4edda; color: #155724; border-color: #c3e6cb; }
     .chip-delivered.active { background: #cce5ff; color: #004085; border-color: #b8daff; }
     .chip-cancelled.active { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+    .chip-failed.active { background: #ffe5d0; color: #8a4b08; border-color: #ffd0a8; }
+    .chip-refunded.active { background: #e2e3e5; color: #383d41; border-color: #d6d8db; }
+    .chip-conflict.active { background: #f5c2c7; color: #58151c; border-color: #ea868f; }
 
     .btn-link-all {
       background: transparent;
@@ -294,10 +297,14 @@ export class OrderManagerComponent implements OnInit {
     { id: 'pending', label: 'Pendiente', cssClass: 'chip-pending' },
     { id: 'paid', label: 'Pagado', cssClass: 'chip-paid' },
     { id: 'delivered', label: 'Entregado', cssClass: 'chip-delivered' },
-    { id: 'cancelled', label: 'Cancelado', cssClass: 'chip-cancelled' }
+    { id: 'cancelled', label: 'Cancelado', cssClass: 'chip-cancelled' },
+    { id: 'failed', label: 'Pago fallido', cssClass: 'chip-failed' },
+    { id: 'refunded', label: 'Reembolsado', cssClass: 'chip-refunded' },
+    { id: 'paid_conflict', label: 'Revisar (conflicto)', cssClass: 'chip-conflict' }
   ];
 
-  selectedStatuses = signal<string[]>(['pending', 'paid', 'delivered', 'cancelled']);
+  // Por defecto se muestran TODOS los estados para que la lista de administración esté completa
+  selectedStatuses = signal<string[]>(['pending', 'paid', 'delivered', 'cancelled', 'failed', 'refunded', 'paid_conflict']);
   sortField = signal<'date' | 'user'>('date');
   sortDirection = signal<'asc' | 'desc'>('desc');
 
@@ -316,8 +323,8 @@ export class OrderManagerComponent implements OnInit {
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dir === 'asc' ? timeA - timeB : timeB - timeA;
       } else {
-        const nameA = (a.customer?.name || '').toLowerCase();
-        const nameB = (b.customer?.name || '').toLowerCase();
+        const nameA = (a.customer_name || a.customer?.name || '').toLowerCase();
+        const nameB = (b.customer_name || b.customer?.name || '').toLowerCase();
         return dir === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
       }
     });

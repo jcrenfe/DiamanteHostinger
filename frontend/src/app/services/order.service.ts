@@ -13,6 +13,8 @@ export interface DeliveryCheckResult {
     distanceKm?: number;
     maxDeliveryMinutes?: number;
     formattedAddress?: string;
+    /** Google ha modificado la dirección escrita (errata, otro código postal…): hay que avisar al cliente */
+    addressCorrected?: boolean;
     proximity?: 'near' | 'medium' | 'far';
     surchargeAmount?: number;
 }
@@ -26,6 +28,7 @@ export interface OrderData {
     };
     delivery: {
         address: string;
+        addressExtra?: string;
         city: string;
         zip: string;
         date: string;
@@ -79,8 +82,8 @@ export class OrderService {
 
     /**
      * Comprueba en vivo (mientras el cliente rellena el checkout) si su dirección existe
-     * y está dentro del radio de reparto. El backend siempre responde 200 aquí (nunca
-     * bloquea por un fallo técnico propio); el bloqueo real y autoritativo ocurre en
+     * y está dentro del radio de reparto. Si la dirección no se puede verificar
+     * se devuelve valid:false (no se acepta el pedido); el bloqueo real y autoritativo ocurre en
      * submitOrder(), que repite la comprobación en el servidor.
      */
     async checkDeliveryDistance(address: string, city: string, zip: string): Promise<DeliveryCheckResult> {
@@ -89,14 +92,15 @@ export class OrderService {
                 this.http.post<DeliveryCheckResult>(`${environment.apiUrl}/logistics/check-delivery`, { address, city, zip })
             );
         } catch (err) {
-            return { valid: true, checked: false, reason: 'check_failed' };
+            return { valid: false, checked: false, reason: 'check_unavailable' };
         }
     }
 
-    async getOrdersByUser(uid: string, email?: string): Promise<any[]> {
+    /** Pedidos del usuario con sesión (mine=1: solo los propios, también si es administrador). */
+    async getOrdersByUser(): Promise<any[]> {
         try {
             const response = await firstValueFrom(
-                this.http.get<any[]>(this.API_URL, { headers: this.getHeaders() })
+                this.http.get<any[]>(`${this.API_URL}?mine=1`, { headers: this.getHeaders() })
             );
             return response;
         } catch (err) {

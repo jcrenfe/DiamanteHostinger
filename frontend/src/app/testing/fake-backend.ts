@@ -17,6 +17,9 @@ export interface FakeOrder {
   delivery_date: string;
   delivery_timeSlot: string;
   delivery_proximity?: 'near' | 'medium' | 'far' | null;
+  total?: number;
+  createdAt?: string;
+  items?: { name: string; quantity: number; price: number; productId?: string }[];
 }
 
 export const fake = {
@@ -81,8 +84,11 @@ export const fakeBackendInterceptor: HttpInterceptorFn = (req, next) => {
     if (!token || token === 'null') {
       return throwError(() => new HttpErrorResponse({ status: 401, url }));
     }
-    const all = token === 'admin' ? fake.orders : fake.orders.filter(o => o.customer_uid === 'me');
-    return of(new HttpResponse({ status: 200, body: JSON.parse(JSON.stringify(all)) }));
+    // GET /orders?mine=1 devuelve solo los pedidos del propio usuario, incluso siendo admin
+    const mine = new URL(url).searchParams.get('mine') === '1';
+    const all = token === 'admin' && !mine ? fake.orders : fake.orders.filter(o => o.customer_uid === 'me');
+    const body = all.map(o => ({ ...o, items: o.items || [] }));
+    return of(new HttpResponse({ status: 200, body: JSON.parse(JSON.stringify(body)) }));
   }
 
   return throwError(() => new HttpErrorResponse({ status: 404, url }));

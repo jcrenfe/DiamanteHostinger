@@ -27,13 +27,13 @@ import { HeaderComponent } from '../../components/header/header.component';
             <div class="items">
               <ul>
                 <li *ngFor="let item of order.items">
-                  {{ item.quantity }}x {{ item.product.name }}
+                  {{ item.quantity }}x {{ item.name || item.product?.name }}
                 </li>
               </ul>
             </div>
             
             <div class="meta">
-              <p><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Fecha: <strong>{{ order.createdAt?.toDate() | date:'medium' }}</strong></p>
+              <p><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Fecha: <strong>{{ order.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></p>
               <p><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Entrega: {{ order.delivery_date }} ({{ order.delivery_timeSlot }})</p>
               <p class="total">Total: <span>{{ order.total | number:'1.2-2' }}€</span></p>
             </div>
@@ -102,8 +102,8 @@ export class MyOrdersComponent {
 
       if (user) {
         this.loading.set(true);
-        const data = await this.orderService.getOrdersByUser(user.uid, user.email || undefined);
-        this.orders.set(data);
+        const data = await this.orderService.getOrdersByUser();
+        this.orders.set([...data].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))));
         this.loading.set(false);
       } else {
         this.orders.set([]);
@@ -114,7 +114,9 @@ export class MyOrdersComponent {
 
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
-      pending: 'Pendiente',
+      pending: 'Pendiente de pago',
+      failed: 'Pago fallido',
+      refunded: 'Reembolsado',
       paid: 'Pagado',
       delivered: 'Entregado',
       cancelled: 'Cancelado',

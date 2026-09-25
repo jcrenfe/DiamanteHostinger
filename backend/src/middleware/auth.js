@@ -29,5 +29,17 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-module.exports = { verifyToken, isAdmin };
+// Identidad opcional: devuelve el usuario si la petición trae un token válido y null en caso contrario
+// (sirve para rutas públicas como crear un pedido, que aceptan tanto invitados como clientes con sesión).
+const optionalUser = (req) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    try {
+        return jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+    } catch (error) {
+        return null;
+    }
+};
+
+module.exports = { verifyToken, isAdmin, optionalUser };
 

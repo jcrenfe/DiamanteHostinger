@@ -6,13 +6,18 @@ const transporter = nodemailer.createTransport({
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false,
     auth: {
-        user: process.env.SMTP_USER || 'jcrenfe@gmail.com',
-        pass: process.env.SMTP_PASS || 'qvnt yffg oxgq swag'
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
     },
     tls: {
         rejectUnauthorized: false
     }
 });
+
+// Logotipo incrustado (cid) para que se vea aunque el cliente de correo bloquee imágenes remotas
+const LOGO_CID = 'logo-diamante';
+const logoAttachment = () => ({ filename: 'logo.png', path: path.join(__dirname, '..', '..', 'assets', 'email-logo.png'), cid: LOGO_CID });
+const fromAddress = () => `"Desayuno con Diamante" <${process.env.SMTP_USER}>`;
 
 function buildOrderEmailHtml(order, orderId) {
     const contactEmail = process.env.CONTACT_RECEIVER || 'jcrenfe@gmail.com';
@@ -70,7 +75,7 @@ function buildOrderEmailHtml(order, orderId) {
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(139,69,19,0.08); border: 1px solid #F0E2D1;">
                     <tr>
                         <td align="center" style="background-color: #8B4513; padding: 25px 20px; text-align: center;">
-                            <h1 style="color: #FDF8F0; margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;">Desayuno con Diamante</h1>
+                            <img src="cid:${LOGO_CID}" alt="Desayuno con Diamante" width="120" height="120" style="display: block; margin: 0 auto; border: 0; border-radius: 60px;">
                             <p style="color: #FDF8F0; margin: 8px 0 0 0; font-size: 13px; opacity: 0.9;">Confirmación de Pedido</p>
                         </td>
                     </tr>
@@ -87,10 +92,15 @@ function buildOrderEmailHtml(order, orderId) {
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #FDF8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #F0E2D1;">
                                 <tr>
                                     <td>
-                                        <h3 style="color: #8B4513; font-size: 15px; margin: 0 0 12px 0;">🚚 Datos de Entrega</h3>
+                                        <h3 style="color: #8B4513; font-size: 15px; margin: 0 0 12px 0;">🚚 ¡Atención! Estos son los datos de entrega</h3>
                                         <p style="margin: 0 0 6px 0; color: #1D1C1B; font-size: 14px;"><strong>Dirección:</strong> ${order.delivery_address || '-'}, ${order.delivery_city || ''} (${order.delivery_zip || ''})</p>
+                                        ${order.delivery_addressExtra ? `<p style="margin: 0 0 6px 0; color: #1D1C1B; font-size: 14px;"><strong>Piso / puerta:</strong> ${order.delivery_addressExtra}</p>` : ''}
+                                        ${order.delivery_addressOriginal ? `<p style="margin: 0 0 6px 0; color: #5D4037; font-size: 13px;"><strong>Dirección que escribiste:</strong> ${order.delivery_addressOriginal}</p>` : ''}
+                                        ${order.delivery_address_corrected ? '<p style="margin: 0 0 8px 0; padding: 8px 10px; background-color: #FFF3CD; border-radius: 6px; color: #7A4B00; font-size: 13px;"><strong>Hemos corregido tu dirección, compruébala por favor.</strong></p>' : ''}
+                                        <p style="margin: 0 0 6px 0; color: #1D1C1B; font-size: 14px;"><strong>Teléfono:</strong> ${order.customer_phone || '-'}</p>
                                         <p style="margin: 0 0 6px 0; color: #1D1C1B; font-size: 14px;"><strong>Fecha:</strong> ${order.delivery_date || '-'}</p>
                                         <p style="margin: 0; color: #1D1C1B; font-size: 14px;"><strong>Tramo horario:</strong> ${order.delivery_timeSlot || 'Por determinar'}</p>
+                                        <p style="margin: 12px 0 0 0; color: #5D4037; font-size: 13px;">Revisa que la dirección y el teléfono sean correctos. Si detectas algún error, responde a este correo o escríbenos a <a href="mailto:${contactEmail}" style="color: #E67E22; text-decoration: none;">${contactEmail}</a> cuanto antes.</p>
                                     </td>
                                 </tr>
                             </table>
@@ -137,10 +147,11 @@ async function sendOrderConfirmationEmail(orderData, orderId) {
     const htmlContent = buildOrderEmailHtml(orderData, orderId);
 
     const mailOptions = {
-        from: `"Desayuno con Diamante" <${process.env.SMTP_USER || 'jcrenfe@gmail.com'}>`,
+        from: fromAddress(),
         to: recipientEmail,
         subject: `Confirmación de Pedido #${orderId} - Desayuno con Diamante`,
-        html: htmlContent
+        html: htmlContent,
+        attachments: [logoAttachment()]
     };
 
     try {
@@ -159,13 +170,38 @@ async function sendSlotConflictRefundEmail(order, refunded = true) {
     const fecha = `${order.delivery_date} a las ${order.delivery_timeSlot}`;
     try {
         await transporter.sendMail({
-            from: `"Desayuno con Diamante" <${process.env.SMTP_USER || 'jcrenfe@gmail.com'}>`,
+            from: fromAddress(),
             to,
             subject: `Tu pedido #${order.id} no ha podido reservarse - Desayuno con Diamante`,
-            html: `<p>Hola ${order.customer_name || ''},</p>
-<p>Lamentablemente la hora de entrega que elegiste (${fecha}) fue reservada por otro cliente mientras completabas el pago, por lo que no podemos atender tu pedido en ese horario.</p>
-<p>${refunded ? 'Hemos <strong>reembolsado el importe completo</strong> a tu tarjeta (puede tardar unos días en reflejarse).' : 'Estamos gestionando el reembolso del importe; nos pondremos en contacto contigo.'}</p>
-<p>Puedes volver a hacer tu pedido eligiendo otra hora. Disculpa las molestias.</p>`
+            html: `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Pedido no reservado - Desayuno con Diamante</title></head>
+<body style="margin: 0; padding: 0; background-color: #FDF8F0; font-family: 'Montserrat', Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #FDF8F0; padding: 30px 10px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; border: 1px solid #F0E2D1;">
+                    <tr>
+                        <td align="center" style="background-color: #8B4513; padding: 25px 20px; text-align: center;">
+                            <img src="cid:${LOGO_CID}" alt="Desayuno con Diamante" width="120" height="120" style="display: block; margin: 0 auto; border: 0; border-radius: 60px;">
+                            <p style="color: #FDF8F0; margin: 8px 0 0 0; font-size: 13px; opacity: 0.9;">Tu pedido no ha podido reservarse</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px; color: #5D4037; font-size: 15px; line-height: 1.6;">
+                            <p>Hola ${order.customer_name || ''},</p>
+                            <p>Lamentablemente la hora de entrega que elegiste (${fecha}) fue reservada por otro cliente mientras completabas el pago, por lo que no podemos atender tu pedido en ese horario.</p>
+                            <p>${refunded ? 'Hemos <strong>reembolsado el importe completo</strong> a tu tarjeta (puede tardar unos días en reflejarse).' : 'Estamos gestionando el reembolso del importe; nos pondremos en contacto contigo.'}</p>
+                            <p>Puedes volver a hacer tu pedido eligiendo otra hora. Disculpa las molestias.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`,
+            attachments: [logoAttachment()]
         });
         return true;
     } catch (err) {

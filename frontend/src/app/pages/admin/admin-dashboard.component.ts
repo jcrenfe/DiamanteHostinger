@@ -134,7 +134,10 @@ export class AdminDashboardComponent implements OnInit {
       paid: 'Pagado',
       delivered: 'Entregado',
       cancelled: 'Cancelado',
-      canceled: 'Cancelado'
+      canceled: 'Cancelado',
+      failed: 'Pago fallido',
+      refunded: 'Reembolsado',
+      paid_conflict: 'Revisar (conflicto)'
     };
     return map[status?.toLowerCase()] || status || '';
   }

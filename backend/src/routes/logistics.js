@@ -23,8 +23,8 @@ router.post('/check-delivery', async (req, res) => {
         res.json(result);
     } catch (error) {
         console.error('Error en /logistics/check-delivery:', error.response?.data || error.message);
-        // No bloqueamos al cliente por un fallo técnico nuestro
-        res.json({ valid: true, checked: false, reason: 'check_failed' });
+        // Sin verificar la dirección no se acepta el pedido
+        res.json({ valid: false, checked: false, reason: 'check_unavailable' });
     }
 });
 

@@ -63,7 +63,7 @@ import { LogisticsService } from '../../services/logistics.service';
                 <span class="step">{{ idx + 1 }}</span>
                 <div class="info">
                    <div class="time">{{ order.delivery_timeSlot }}</div>
-                   <div class="addr">{{ order.customer_name }} - {{ order.delivery_address }}</div>
+                   <div class="addr">{{ order.customer_name }} - {{ order.delivery_address }}<span *ngIf="order.delivery_addressExtra"> ({{ order.delivery_addressExtra }})</span></div>
                 </div>
              </div>
           </div>
