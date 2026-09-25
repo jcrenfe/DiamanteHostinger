@@ -42,8 +42,13 @@ async function geocodeAddress(address) {
     const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
         params: { address, key: GOOGLE_MAPS_KEY }
     });
-    if (response.data.status !== 'OK' || !response.data.results.length) {
-        return null;
+    const status = response.data.status;
+    if (status === 'ZERO_RESULTS' || (status === 'OK' && !response.data.results.length)) {
+        return null; // la dirección realmente no existe
+    }
+    if (status !== 'OK') {
+        // REQUEST_DENIED (facturación/clave), OVER_QUERY_LIMIT, etc.: es un fallo del servicio, no de la dirección
+        throw new Error(`Geocoding API: ${status} ${response.data.error_message || ''}`.trim());
     }
     const result = response.data.results[0];
     return {
@@ -91,7 +96,13 @@ async function checkDeliveryDistance({ address, city, zip }) {
         return { valid: true, checked: false, reason: 'no_origin_configured' };
     }
 
-    const geo = await geocodeAddress(fullAddress);
+    let geo;
+    try {
+        geo = await geocodeAddress(fullAddress);
+    } catch (e) {
+        console.error('❌ Geocoding de Google no disponible; se acepta el pedido sin comprobar la distancia:', e.response?.data || e.message);
+        return { valid: true, checked: false, reason: 'geocode_unavailable' };
+    }
     if (!geo) {
         return { valid: false, checked: true, reason: 'address_not_found' };
     }

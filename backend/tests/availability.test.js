@@ -330,3 +330,22 @@ test('retención: /orders/occupancy no lista los pedidos sin pagar caducados', a
     const res = await (await call('GET', '/orders/occupancy?date=2099-03-03')).json();
     assert.deepEqual(res.map(o => o.timeSlot), ['10:00']);
 });
+
+test('si Google Geocoding falla por facturación/clave (REQUEST_DENIED) NO se bloquea al cliente: se acepta sin comprobar (fail-open)', async () => {
+    db.config = baseConfig();
+    const original = axios.get;
+    axios.get = async () => ({ data: { status: 'REQUEST_DENIED', error_message: 'You must enable Billing' } });
+    try {
+        const r = await check();
+        assert.deepEqual([r.valid, r.checked, r.reason], [true, false, 'geocode_unavailable']);
+        const res = await call('POST', '/orders', { body: newOrder('2099-03-03', '10:00') });
+        assert.equal(res.status, 200);
+    } finally { axios.get = original; }
+});
+
+test('una dirección que Google no encuentra (ZERO_RESULTS) sigue rechazándose como address_not_found', async () => {
+    db.config = baseConfig();
+    geocodeOk = false;
+    const r = await check();
+    assert.deepEqual([r.valid, r.reason], [false, 'address_not_found']);
+});
