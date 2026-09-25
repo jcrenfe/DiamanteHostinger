@@ -1,5 +1,0 @@
-En base a las instrucciones que están contenidas en C:\WEBs\Diamante\DatosIniciales\Prompt\agenteWeb.txt , crea un workflow en Antigravity que permita al agente ejecutor realizar 
-todas las tareas con la mayor autonomía posible, especificando que tiene accesos totales a los archivos y carpetas del proyecto, acceso de lectura a todos los datos del resto del 
-sistema de archivos de la máquina local, permiso de ejecución de todos los comandos necesarios en el entorno de proyecto (especificando todos los comandos que sean necesarios), 
-y manejo del navegador integrado en Antigravity y sus herramientas. Todas estas habilidades estarán disponibles para todos los subagentes o subprocesos que el agente utilice. 
-Las instrucciones tienen que ser muy detalladas y fieles al contenido de agenteWeb.txt

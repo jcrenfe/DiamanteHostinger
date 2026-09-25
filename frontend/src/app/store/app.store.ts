@@ -3,10 +3,6 @@ import { Injectable, signal, computed } from '@angular/core';
 export interface ResourceMap {
     id: string;
     url_origen: string;
-    ruta_imagen?: string;
-    ruta_texto?: string;
-    textos_asociados?: string[];
-    contenido_resumen?: string;
     tipo: 'asociado' | 'libre';
     // Mapped fields
     name?: string;
