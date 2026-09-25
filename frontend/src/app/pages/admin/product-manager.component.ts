@@ -6,6 +6,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ResourceMap } from '../../store/app.store';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../../utils/api-base';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ImageOptimizerService } from '../../services/image-optimizer.service';
@@ -557,7 +558,7 @@ export class ProductManagerComponent implements OnInit {
     if (path.startsWith('assets/') || path.startsWith('/assets/')) {
         return path;
     }
-    const baseUrl = environment.apiUrl.replace('/api', '');
+    const baseUrl = apiBaseUrl(environment.apiUrl);
     const cleanPath = path.startsWith('/') ? path : '/' + path;
     return baseUrl + cleanPath;
   }

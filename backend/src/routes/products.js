@@ -3,11 +3,16 @@ const prisma = require('../config/prisma');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const router = express.Router();
 
+// Rutas absolutas de desarrollo (http://localhost:3500/uploads/x.webp) -> relativas (/uploads/x.webp),
+// para que las imágenes se vean desde cualquier entorno.
+const relativeImage = (p) => (typeof p === 'string' ? p.replace(/^https?:\/\/localhost(:\d+)?/, '') : p);
+const cleanProduct = (prod) => (prod ? { ...prod, local_image_path: relativeImage(prod.local_image_path) } : prod);
+
 // GET /api/products - Obtener todos los productos
 router.get('/', async (req, res) => {
     try {
         const products = await prisma.product.findMany();
-        res.json(products);
+        res.json(products.map(cleanProduct));
     } catch (e) {
         console.error('Error GET /api/products:', e);
         res.status(500).json({ error: 'Error al obtener productos', details: e.message || String(e) });
@@ -21,7 +26,7 @@ router.get('/:id', async (req, res) => {
             where: { id: req.params.id }
         });
         if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
-        res.json(product);
+        res.json(cleanProduct(product));
     } catch (e) {
         res.status(500).json({ error: 'Error al obtener producto' });
     }

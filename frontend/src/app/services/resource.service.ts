@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { AppStore, ResourceMap } from '../store/app.store';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { apiBaseUrl } from '../utils/api-base';
 
 @Injectable({
     providedIn: 'root'
@@ -21,8 +22,12 @@ export class ResourceService {
         try {
             const products = await firstValueFrom(this.http.get<ResourceMap[]>(this.API_URL));
 
-            const baseUrl = environment.apiUrl.replace('/api', '');
+            const baseUrl = apiBaseUrl(environment.apiUrl);
             (products || []).forEach(p => {
+                if (p.local_image_path) {
+                    // Rutas absolutas guardadas en desarrollo (http://localhost:3500/uploads/...) se reconducen al servidor actual
+                    p.local_image_path = p.local_image_path.replace(/^https?:\/\/localhost(:\d+)?/, '');
+                }
                 if (p.local_image_path && p.local_image_path.startsWith('/')) {
                     p.local_image_path = baseUrl + p.local_image_path;
                 }

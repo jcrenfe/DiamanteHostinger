@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { apiBaseUrl } from '../utils/api-base';
 
 @Pipe({
   name: 'imageUrl',
@@ -14,7 +15,7 @@ export class ImageUrlPipe implements PipeTransform {
     if (path.startsWith('assets/') || path.startsWith('/assets/')) {
       return path;
     }
-    const baseUrl = environment.apiUrl.replace('/api', '');
+    const baseUrl = apiBaseUrl(environment.apiUrl);
     const cleanPath = path.startsWith('/') ? path : '/' + path;
     return baseUrl + cleanPath;
   }
