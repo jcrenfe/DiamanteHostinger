@@ -124,6 +124,14 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    // En producción nunca se aceptan avisos sin verificar su firma: sin un secreto real configurado
+    // cualquiera podría enviar un "pago completado" falso.
+    const secretConfigured = endpointSecret && !endpointSecret.includes('REEMPLAZAR');
+    if (!secretConfigured && process.env.NODE_ENV === 'production') {
+        console.error('❌ STRIPE_WEBHOOK_SECRET no configurado: aviso de Stripe rechazado.');
+        return res.status(500).send('Webhook secret not configured');
+    }
+
     if (!stripeKey) {
         return res.status(400).send('Stripe key missing');
     }

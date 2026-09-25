@@ -58,6 +58,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// El webhook de Stripe necesita el cuerpo SIN procesar para verificar la firma: debe registrarse
+// antes que express.json(), que si no lo convertiría en objeto y la verificación fallaría siempre.
+app.use('/api/payment/stripe-webhook', express.raw({ type: 'application/json' }));
+
 // Configura Express para analizar automáticamente los cuerpos de petición HTTP que vengan en formato JSON
 app.use(express.json());
 
@@ -104,8 +108,13 @@ app.get('/', (req, res) => {
 });
 
 // Pone al servidor Express a escuchar las peticiones HTTP entrantes en el puerto configurado
-app.listen(PORT, () => {
-    // Imprime en la consola del servidor que está en funcionamiento y listo en el puerto indicado
-    console.log(`Backend listening on port ${PORT}`);
-});
+if (process.env.NO_LISTEN !== '1') {
+    app.listen(PORT, () => {
+        // Imprime en la consola del servidor que está en funcionamiento y listo en el puerto indicado
+        console.log(`Backend listening on port ${PORT}`);
+    });
+}
+
+// Exporta la aplicación para poder probarla sin abrir un puerto (NO_LISTEN=1)
+module.exports = app;
 
