@@ -42,3 +42,7 @@ backend.tar.gz
 
 # Configuración local de Claude Code
 .claude/
+
+# Copias de seguridad de la base de datos (contienen datos de usuarios)
+backups/
+release/
