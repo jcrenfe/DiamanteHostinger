@@ -44,9 +44,7 @@ router.post('/image', verifyToken, isAdmin, upload.single('image'), (req, res) =
         // Devolver la URL absoluta de la imagen subida
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const host = req.headers['x-forwarded-host'] || req.get('host');
-        const baseUrl = process.env.NODE_ENV === 'production' 
-            ? 'https://api.thewayweb.com' 
-            : `${protocol}://${host}`;
+        const baseUrl = process.env.PUBLIC_BASE_URL || `${protocol}://${host}`;
         const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
         res.json({ url: imageUrl });
     } catch (error) {

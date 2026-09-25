@@ -103,6 +103,8 @@ export interface StatusFilterOption {
             <div class="customer-info">
               <p>👤 <strong>{{ order.customer_name }}</strong> ({{ order.customer_email }})</p>
               <p>📍 {{ order.delivery_address }}, {{ order.delivery_city }} ({{ order.delivery_zip }})</p>
+              <p *ngIf="order.delivery_durationMin != null">🚗 {{ order.delivery_durationMin }} min · {{ order.delivery_distanceKm }} km desde el origen</p>
+              <p *ngIf="order.delivery_surchargeAmount > 0">🚚 Incremento por desplazamiento: <strong>{{ order.delivery_surchargeAmount | number:'1.2-2' }}€</strong></p>
               <p>📅 Entrega: <strong>{{ order.delivery_date }}</strong> - {{ order.delivery_timeSlot }}</p>
               <p *ngIf="order.delivery_message">💌 <em>"{{ order.delivery_message }}"</em></p>
             </div>

@@ -107,61 +107,90 @@ import { ProductCardComponent } from '../../components/product-card/product-card
 
     <!-- Modal Form -->
     <div class="admin-modal" *ngIf="isModalOpen()">
-      <div class="modal-content shadow-lg">
-        <h3 class="title-font">{{ editingId ? 'Editar' : 'Nuevo' }} Producto</h3>
-        <form (ngSubmit)="saveProduct()">
-          <div class="form-group">
-            <label>Nombre</label>
-            <input type="text" [(ngModel)]="currentProd.name" name="name" required>
+      <div class="modal-content product-form-content shadow-lg">
+        <header class="form-modal-header">
+          <div>
+            <span class="form-modal-eyebrow">Catálogo</span>
+            <h3 class="title-font">{{ editingId ? 'Editar producto' : 'Nuevo producto' }}</h3>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Precio (€)</label>
-              <input type="number" step="0.01" [(ngModel)]="currentProd.price" name="price" required>
-            </div>
-            <div class="form-group">
-              <label>Categoría</label>
-              <select [(ngModel)]="currentProd.category" name="category" required>
-                <option *ngFor="let cat of categoryService.categories()" [value]="cat.name">{{ cat.name }}</option>
-              </select>
-            </div>
+          <div class="form-modal-actions">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="closeModal()" [disabled]="isUploading()">Cancelar</button>
+            <button type="submit" form="productForm" class="btn btn-primary btn-sm" [disabled]="isUploading()">Guardar</button>
+            <button type="button" class="btn-close" (click)="closeModal()" [disabled]="isUploading()" aria-label="Cerrar">×</button>
           </div>
-          <div class="form-group checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="currentProd.showOnHome" name="showOnHome">
-              <span>Mostrar en inicio</span>
-            </label>
-          </div>
-          <div class="form-group">
-            <label>Descripción</label>
-            <textarea [(ngModel)]="currentProd.description" name="description" rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Ruta Imagen (local o remota)</label>
-            <input type="text" [(ngModel)]="currentProd.local_image_path" name="image" placeholder="assets/images/... o http...">
-            
-            <label class="mt-2">O sube un archivo desde tu dispositivo:</label>
-            <input type="file" accept="image/*" (change)="handleImageUpload($event)" [disabled]="isUploading()">
-            
-            <div *ngIf="isUploading()" class="upload-progress-container mt-3">
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="uploadProgress()"></div>
-              </div>
-              <div class="upload-status">
-                <small class="text-muted">Subiendo: {{ uploadProgress() }}%</small>
-                <button type="button" class="btn-cancel-upload" (click)="cancelUpload()">
-                  <svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
+        </header>
 
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="isUploading()">Cancelar</button>
-            <button type="submit" class="btn btn-primary" [disabled]="isUploading()">Guardar Cambios</button>
-          </div>
-        </form>
+        <div class="product-form-layout">
+          <form class="product-form" id="productForm" (ngSubmit)="saveProduct()">
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" [(ngModel)]="currentProd.name" name="name" placeholder="Ej. Cesta de bienvenida" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Precio (€)</label>
+                <input type="number" step="0.01" [(ngModel)]="currentProd.price" name="price" placeholder="0.00" required>
+              </div>
+              <div class="form-group">
+                <label>Categoría</label>
+                <select [(ngModel)]="currentProd.category" name="category" required>
+                  <option *ngFor="let cat of categoryService.categories()" [value]="cat.name">{{ cat.name }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="currentProd.showOnHome" name="showOnHome">
+                <span>Mostrar en la página de inicio</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Descripción</label>
+              <textarea [(ngModel)]="currentProd.description" name="description" rows="4" placeholder="Describe el producto..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Imagen del producto</label>
+              <div class="image-upload-zone">
+                <input type="text" [(ngModel)]="currentProd.local_image_path" name="image" placeholder="assets/images/... o https://...">
+
+                <div class="upload-divider"><span>o</span></div>
+
+                <label class="file-drop" [class.disabled]="isUploading()">
+                  <svg width="1.3em" height="1.3em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span>Sube una imagen desde tu dispositivo</span>
+                  <small>Se optimizará automáticamente a formato WebP</small>
+                  <input type="file" accept="image/*" (change)="handleImageUpload($event)" [disabled]="isUploading()" hidden>
+                </label>
+
+                <div *ngIf="isUploading()" class="upload-progress-container mt-3">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="uploadProgress()"></div>
+                  </div>
+                  <div class="upload-status">
+                    <small class="text-muted">Subiendo: {{ uploadProgress() }}%</small>
+                    <button type="button" class="btn-cancel-upload" (click)="cancelUpload()">
+                      <svg width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <aside class="live-preview">
+            <span class="live-preview-label">
+              <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              Vista previa en vivo
+            </span>
+            <div class="live-preview-box">
+              <div class="live-preview-card">
+                <app-product-card [product]="getPreviewProduct()" [previewMode]="true"></app-product-card>
+              </div>
+              <p class="live-preview-hint">Así se verá la tarjeta en la tienda.</p>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   `,
@@ -232,14 +261,112 @@ import { ProductCardComponent } from '../../components/product-card/product-card
       z-index: 5000;
       padding: 40px;
     }
-    .modal-content { 
-      background: white; 
-      padding: 2.5rem; 
-      border-radius: 16px; 
-      width: 100%; 
-      max-width: 500px; 
-      max-height: 90vh; 
-      overflow-y: auto; 
+    .modal-content {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* --- Modal de creación/edición de producto --- */
+    .product-form-content {
+      max-width: 800px;
+      padding: 1.25rem 1.75rem 1.75rem;
+      background: linear-gradient(180deg, #FFFDFB 0%, #FFFFFF 140px);
+    }
+    .form-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.1rem;
+      border-bottom: 1px solid rgba(139, 69, 19, 0.12);
+    }
+    .form-modal-header h3 { margin-bottom: 0; font-size: 1.1rem; }
+    .form-modal-eyebrow {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      margin-bottom: 0.15rem;
+    }
+    .form-modal-actions { display: flex; align-items: center; gap: 0.6rem; }
+    .btn-sm {
+      padding: 0.45rem 1rem;
+      font-size: 0.8rem;
+      border-radius: var(--radius-md);
+    }
+    .form-modal-actions .btn-close { font-size: 1.4rem; padding: 0 0 0 0.3rem; }
+
+    .product-form-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 1.75rem;
+      align-items: stretch;
+    }
+    /* Ambas columnas (form y preview) son "auto" + align-items:stretch, así que la fila
+       adopta la altura de la que sea más alta de forma natural (puede variar según el
+       contenido). La otra columna, al estirarse, absorbe el espacio sobrante en su último
+       bloque (form-group con borde, o la caja de preview) para que sus bordes siempre
+       terminen justo en el borde inferior de la fila, sea cual sea la más alta. */
+    .product-form {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .product-form > .form-group:last-child {
+      flex: 1;
+      min-height: 0;
+      margin-bottom: 0;
+    }
+    .product-form > .form-group:last-child .image-upload-zone {
+      flex: 1;
+      min-height: 0;
+      justify-content: center;
+    }
+
+    .live-preview {
+      display: flex;
+      flex-direction: column;
+    }
+    .live-preview-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 0.4rem;
+    }
+    .live-preview-box {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      background: var(--background);
+      border: 1px solid rgba(139, 69, 19, 0.12);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    /* El ancho coincide con el mínimo de tarjeta usado en la cuadrícula real (minmax(300px, 1fr))
+       para que la vista previa conserve exactamente las mismas proporciones que en la tienda. */
+    .live-preview-card { width: 100%; max-width: 300px; }
+    .live-preview-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin: 0;
     }
     .preview-content { 
       background: white;
@@ -267,13 +394,108 @@ import { ProductCardComponent } from '../../components/product-card/product-card
     .btn-cancel-upload { background: none; border: none; color: #dc3545; display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 4px; transition: background 0.2s; }
     .btn-cancel-upload:hover { background: #fff5f5; }
 
-    .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
-    
-    .checkbox-group { margin-bottom: 1.5rem; }
-    .checkbox-label { display: flex; align-items: center; gap: 0.8rem; cursor: pointer; font-weight: 500; color: var(--text-dark); }
-    .checkbox-label input[type="checkbox"] { width: 1.2rem; height: 1.2rem; cursor: pointer; accent-color: var(--primary); }
+    .form-group { margin-bottom: 0.9rem; display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .form-group label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      min-width: 0;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      color: var(--text-dark);
+      background: #FFFCF9;
+      border: 1.5px solid rgba(139, 69, 19, 0.15);
+      border-radius: var(--radius-md);
+      padding: 0.5rem 0.7rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .form-group input[type="text"]:focus,
+    .form-group input[type="number"]:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--secondary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.14);
+    }
+    .form-group textarea { resize: vertical; }
+
+    .checkbox-group { margin-bottom: 0.9rem; }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.82rem;
+      color: var(--text-dark);
+      background: var(--background);
+      border: 1px solid rgba(139, 69, 19, 0.12);
+      border-radius: var(--radius-md);
+      padding: 0.55rem 0.75rem;
+    }
+    .checkbox-label input[type="checkbox"] { width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--primary); }
+
+    .image-upload-zone {
+      background: var(--background);
+      border: 1px solid rgba(139, 69, 19, 0.12);
+      border-radius: var(--radius-lg);
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .upload-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--text-muted);
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 0.15rem 0;
+    }
+    .upload-divider::before,
+    .upload-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(139, 69, 19, 0.15);
+    }
+    .file-drop {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      text-align: center;
+      color: var(--primary);
+      background: #fff;
+      border: 1.5px dashed rgba(139, 69, 19, 0.3);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .file-drop:hover { border-color: var(--secondary); background: #FFF8F0; }
+    .file-drop span { font-weight: 600; font-size: 0.78rem; }
+    .file-drop small { color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .file-drop.disabled { opacity: 0.6; cursor: not-allowed; }
+
+    @media (max-width: 820px) {
+      .product-form-layout { grid-template-columns: 1fr; }
+      .live-preview-card { max-width: 300px; }
+    }
   `]
 })
 export class ProductManagerComponent implements OnInit {
@@ -320,7 +542,7 @@ export class ProductManagerComponent implements OnInit {
 
   private http = inject(HttpClient);
   private readonly API_URL = `${environment.apiUrl}/products`;
-  private readonly UPLOAD_URL = `${environment.apiUrl}/upload`;
+  private readonly UPLOAD_URL = `${environment.apiUrl}/upload/image`;
 
   private getHeaders() {
       const token = localStorage.getItem('token');
@@ -414,6 +636,20 @@ export class ProductManagerComponent implements OnInit {
       this.isUploading.set(false);
   }
 
+  getPreviewProduct(): ResourceMap {
+    return {
+      id: this.editingId || 'preview',
+      url_origen: '',
+      tipo: 'libre',
+      name: this.currentProd.name || 'Nombre del producto',
+      price: this.currentProd.price,
+      description: this.currentProd.description,
+      category: this.currentProd.category,
+      local_image_path: this.currentProd.local_image_path,
+      showOnHome: this.currentProd.showOnHome
+    };
+  }
+
   previewProduct(prod: ResourceMap) {
     this.viewingProd.set(prod);
     this.previewState.set('card'); // Reset to card view by default
@@ -424,8 +660,10 @@ export class ProductManagerComponent implements OnInit {
     try {
       const { id, ...clone } = prod;
 
+      const newId = `${id}-copy-${Date.now()}`;
       const newProd = {
         ...clone,
+        id: newId,
         name: `${prod.name} (Copia)`
       };
 
@@ -447,7 +685,8 @@ export class ProductManagerComponent implements OnInit {
       if (this.editingId) {
         await firstValueFrom(this.http.put(`${this.API_URL}/${this.editingId}`, this.currentProd, { headers: this.getHeaders() }));
       } else {
-        await firstValueFrom(this.http.post(this.API_URL, this.currentProd, { headers: this.getHeaders() }));
+        const id = this.currentProd.name?.toLowerCase().replace(/\s+/g, '-') || Date.now().toString();
+        await firstValueFrom(this.http.post(this.API_URL, { ...this.currentProd, id }, { headers: this.getHeaders() }));
       }
       this.closeModal();
       this.loadProducts();

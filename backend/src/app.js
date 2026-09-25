@@ -7,46 +7,11 @@ const cors = require('cors');
 // Importa Helmet para añadir cabeceras HTTP de seguridad y proteger la aplicación de vulnerabilidades web comunes
 const helmet = require('helmet');
 
-// Importa el SDK de administración de Firebase para tener privilegios de lectura y escritura en la base de datos y autenticación
-const admin = require('firebase-admin');
-
 // Carga las variables de entorno definidas en el archivo '.env' en el objeto global 'process.env'
 require('dotenv').config();
 
 // Importa el módulo nativo 'path' de Node.js para trabajar con rutas de archivos y directorios de forma segura
 const path = require('path');
-
-// Comprueba si se ha definido la ruta del archivo JSON de credenciales de Firebase en las variables de entorno
-if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    try {
-        // Resuelve la ruta absoluta del archivo de credenciales concatenando el directorio actual con la variable de entorno
-        const saPath = path.resolve(__dirname, '..', process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-        
-        // Carga y lee el contenido del archivo JSON de credenciales de la cuenta de servicio de Firebase
-        const serviceAccount = require(saPath);
-        
-        // Inicializa la aplicación de administración de Firebase utilizando la credencial cargada
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        // Imprime en la consola del servidor que Firebase Admin se ha conectado correctamente indicando la ruta del archivo
-        console.log('Firebase Admin Initialized from:', saPath);
-    } catch (err) {
-        // En caso de fallo al leer el JSON o conectar, muestra una advertencia en la consola con el mensaje de error
-        console.warn('Error initializing Firebase Admin with JSON:', err.message);
-    }
-} else {
-    // Si no hay un archivo de credenciales local especificado, intenta inicializar con la configuración por defecto
-    try {
-        // Inicializa Firebase Admin usando credenciales implícitas (por ejemplo, si el código se ejecuta en Google Cloud Platform)
-        admin.initializeApp();
-        // Imprime que se ha inicializado con la configuración predeterminada
-        console.log('Firebase Admin Initialized (Default).');
-    } catch (err) {
-        // Si falla la inicialización predeterminada, advierte en consola que se necesita configurar el archivo en el '.env'
-        console.warn('Firebase Admin NOT initialized. Set FIREBASE_SERVICE_ACCOUNT_JSON in .env');
-    }
-}
 
 // Crea una instancia de la aplicación Express para configurar las rutas y middlewares
 const app = express();
