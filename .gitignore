@@ -39,3 +39,6 @@ Thumbs.db
 frontend_deploy.zip
 backend/backend.zip
 backend.tar.gz
+
+# Configuración local de Claude Code
+.claude/
