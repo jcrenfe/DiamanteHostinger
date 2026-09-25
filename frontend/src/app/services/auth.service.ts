@@ -114,11 +114,9 @@ export class AuthService {
             const user = credential.user;
 
             const response = await firstValueFrom(
+                // El servidor verifica este token con Google; no confía en datos enviados a mano
                 this.http.post<{token: string, user: UserProfile}>(`${this.API_URL}/google`, {
-                    email: user.email,
-                    displayName: user.displayName || user.email?.split('@')[0],
-                    uid: user.uid,
-                    photoURL: user.photoURL
+                    idToken: await user.getIdToken()
                 })
             );
 

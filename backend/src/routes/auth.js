@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_diamante';
+const { JWT_SECRET } = require('../config/jwt');
+const { verifyFirebaseIdToken } = require('../services/googleIdToken');
 
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
@@ -81,23 +82,22 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/google - Autenticación con Google
+// El navegador envía el ID token de Firebase; la identidad (email/uid) se toma SIEMPRE del token
+// verificado en el servidor, nunca de campos enviados por el cliente.
 router.post('/google', async (req, res) => {
-    const { email, displayName, uid } = req.body;
-
-    if (!email) {
-        return res.status(400).json({ error: 'Email es obligatorio' });
+    let identity;
+    try {
+        identity = await verifyFirebaseIdToken(req.body?.idToken);
+    } catch (e) {
+        return res.status(401).json({ error: 'No se pudo verificar la identidad de Google.' });
     }
+    const { email, displayName, uid } = identity;
 
     try {
         let user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             user = await prisma.user.create({
-                data: {
-                    uid: uid || require('crypto').randomUUID(),
-                    email,
-                    displayName: displayName || email.split('@')[0],
-                    role: 'cliente'
-                }
+                data: { uid, email, displayName, role: 'cliente' }
             });
         }
 
