@@ -37,6 +37,18 @@ function buildOrderEmailHtml(order, orderId) {
         `;
     }).join('');
 
+    const surchargeAmount = parseFloat(order.delivery_surchargeAmount || 0);
+    const surchargeRow = surchargeAmount > 0 ? `
+        <tr>
+            <td style="padding: 12px 0; border-bottom: 1px dashed #EECDAB; color: #E67E22; font-style: italic; font-size: 14px;">
+                🚚 Incremento por desplazamiento
+            </td>
+            <td style="padding: 12px 0; border-bottom: 1px dashed #EECDAB; color: #E67E22; font-weight: bold; text-align: right; font-size: 14px;">
+                ${surchargeAmount.toFixed(2)}€
+            </td>
+        </tr>
+    ` : '';
+
     const personalizationBlock = order.delivery_message ? `
         <div style="background-color: #FFF9F2; border-left: 4px solid #E67E22; padding: 16px; margin: 24px 0; border-radius: 6px;">
             <p style="margin: 0 0 6px 0; color: #8B4513; font-weight: bold; font-size: 13px; text-transform: uppercase;">💌 Mensaje para la Tarjeta:</p>
@@ -88,6 +100,7 @@ function buildOrderEmailHtml(order, orderId) {
                             <h3 style="color: #8B4513; font-size: 16px; margin: 24px 0 12px 0;">🛍️ Resumen del Pedido</h3>
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                                 ${itemsRows}
+                                ${surchargeRow}
                                 <tr>
                                     <td style="padding: 16px 0 0 0; color: #8B4513; font-size: 18px; font-weight: bold;">Total Pagado</td>
                                     <td style="padding: 16px 0 0 0; color: #8B4513; font-size: 20px; font-weight: bold; text-align: right;">${total}€</td>
@@ -140,7 +153,29 @@ async function sendOrderConfirmationEmail(orderData, orderId) {
     }
 }
 
+async function sendSlotConflictRefundEmail(order, refunded = true) {
+    const to = order.customer_email;
+    if (!to) return false;
+    const fecha = `${order.delivery_date} a las ${order.delivery_timeSlot}`;
+    try {
+        await transporter.sendMail({
+            from: `"Desayuno con Diamante" <${process.env.SMTP_USER || 'jcrenfe@gmail.com'}>`,
+            to,
+            subject: `Tu pedido #${order.id} no ha podido reservarse - Desayuno con Diamante`,
+            html: `<p>Hola ${order.customer_name || ''},</p>
+<p>Lamentablemente la hora de entrega que elegiste (${fecha}) fue reservada por otro cliente mientras completabas el pago, por lo que no podemos atender tu pedido en ese horario.</p>
+<p>${refunded ? 'Hemos <strong>reembolsado el importe completo</strong> a tu tarjeta (puede tardar unos días en reflejarse).' : 'Estamos gestionando el reembolso del importe; nos pondremos en contacto contigo.'}</p>
+<p>Puedes volver a hacer tu pedido eligiendo otra hora. Disculpa las molestias.</p>`
+        });
+        return true;
+    } catch (err) {
+        console.error('❌ Error al enviar correo de conflicto de horario:', err.message);
+        return false;
+    }
+}
+
 module.exports = {
     transporter,
+    sendSlotConflictRefundEmail,
     sendOrderConfirmationEmail
 };

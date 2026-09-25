@@ -2,10 +2,31 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 require('dotenv').config();
+const { checkDeliveryDistance } = require('../services/deliveryDistance');
 
 const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
 const MOCK_MODE = !GOOGLE_MAPS_KEY;
+
+/**
+ * Comprueba si una dirección de entrega existe y está dentro del radio de reparto
+ * configurado en el panel de administración (Disponibilidad > Origen y Proximidad).
+ * Pública: la usa el checkout para dar feedback en vivo antes de confirmar el pedido.
+ */
+router.post('/check-delivery', async (req, res) => {
+    const { address, city, zip } = req.body || {};
+    if (!address || !city || !zip) {
+        return res.status(400).json({ valid: false, reason: 'missing_fields' });
+    }
+    try {
+        const result = await checkDeliveryDistance({ address, city, zip });
+        res.json(result);
+    } catch (error) {
+        console.error('Error en /logistics/check-delivery:', error.response?.data || error.message);
+        // No bloqueamos al cliente por un fallo técnico nuestro
+        res.json({ valid: true, checked: false, reason: 'check_failed' });
+    }
+});
 
 /**
  * Route Optimization API (Enterprise Level)

@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../config/prisma');
+const { beginPayment, attachSession, releasePaymentHold, confirmStripePayment } = require('../services/paymentFlow');
+const { PAYMENT_HOLD_MINUTES } = require('../services/availability');
 
 // Redsys Test Configuration
 const MERCHANT_KEY = process.env.MERCHANT_KEY || 'sq7HjrUOBfKmC576ILgskD5srU870gJ7';
@@ -21,7 +23,15 @@ router.post('/create-payment', async (req, res) => {
 
     // Si Stripe está configurado y no se solicita explícitamente Redsys, usamos Stripe Embedded Checkout
     if (stripeKey && (!gateway || gateway === 'stripe')) {
+        let heldOrder = null;
         try {
+            // Comprueba que la hora sigue libre y retiene la hora mientras dura el pago.
+            const begin = await beginPayment(orderId);
+            if (!begin.ok) {
+                return res.status(begin.status).json({ error: begin.error, reason: begin.reason });
+            }
+            heldOrder = begin.order;
+
             const stripe = require('stripe')(stripeKey, { apiVersion: '2024-06-20' });
             const amountCents = Math.round(parseFloat(amount) * 100);
 
@@ -52,6 +62,8 @@ router.post('/create-payment', async (req, res) => {
                     },
                 ],
                 mode: 'payment',
+                // La sesión caduca justo cuando termina la retención de la hora.
+                expires_at: Math.floor(Date.now() / 1000) + PAYMENT_HOLD_MINUTES * 60,
                 return_url: returnUrl,
                 metadata: {
                     orderId: orderId.toString()
@@ -63,8 +75,10 @@ router.post('/create-payment', async (req, res) => {
                 }
             });
 
+            if (heldOrder) await attachSession(heldOrder, session.id);
             return res.json({ clientSecret: session.client_secret, sessionId: session.id });
         } catch (error) {
+            if (heldOrder) await releasePaymentHold(heldOrder).catch(() => {});
             console.error('❌ Error al crear sesión de Stripe:', error.message);
             return res.status(500).json({ error: error.message });
         }
@@ -135,23 +149,9 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
 
         if (orderId) {
             try {
-                const order = await prisma.order.findFirst({
-                    where: { redsysOrderId: String(orderId) }
-                }) || await prisma.order.findUnique({
-                    where: { id: String(orderId) }
-                });
-
-                if (order) {
-                    await prisma.order.update({
-                        where: { id: order.id },
-                        data: {
-                            status: 'paid',
-                            stripeSessionId: session.id,
-                            stripePaymentIntent: session.payment_intent,
-                            updatedAt: new Date()
-                        }
-                    });
-                }
+                // Reconfirma la hora bajo bloqueo; si otro pedido pagado la ocupó, reembolsa automáticamente.
+                const outcome = await confirmStripePayment({ stripe, session });
+                console.log(`💳 Pago ${session.id} del pedido ${orderId}: ${outcome.result}`);
             } catch (dbError) {
                 console.error('❌ Database error updating order:', dbError);
             }

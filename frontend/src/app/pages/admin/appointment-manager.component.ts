@@ -91,11 +91,55 @@ import { ConfirmDialogService } from '../../services/confirm-dialog.service';
           </div>
         </div>
 
-        <!-- Block 3: Bloqueo de Citas -->
+        <!-- Block 3: Origen y Proximidad -->
         <div class="admin-card">
-          <h3 class="title-font mb-3">3. Bloqueo de Citas</h3>
-          <p class="text-muted small mb-4">Minutos a bloquear antes y después de cada reserva según CP.</p>
-          
+          <h3 class="title-font mb-3">3. Origen y Proximidad</h3>
+          <p class="text-muted small mb-4">Punto de partida para calcular el trayecto, y a partir de cuántos minutos de viaje se considera cerca, media o lejos.</p>
+
+          <div class="form-group mb-3">
+            <label>Dirección de origen</label>
+            <input type="text" [(ngModel)]="config()!.originAddress" placeholder="Ej. Calle de la Princesa, 1, Madrid">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cerca: hasta (min)</label>
+              <input type="number" [(ngModel)]="config()!.proximityThresholds.nearMaxMinutes" min="0" step="5">
+            </div>
+            <div class="form-group">
+              <label>Media: hasta (min)</label>
+              <input type="number" [(ngModel)]="config()!.proximityThresholds.mediumMaxMinutes" [min]="config()!.proximityThresholds.nearMaxMinutes" step="5">
+            </div>
+          </div>
+          <p class="text-muted threshold-hint">Lejos: más de {{ config()!.proximityThresholds.mediumMaxMinutes }} min desde el origen.</p>
+
+          <div class="form-group mt-3">
+            <label>Radio máximo de reparto (min)</label>
+            <input type="number" [(ngModel)]="config()!.maxDeliveryMinutes" min="0" step="5">
+          </div>
+          <p class="text-muted threshold-hint">Los pedidos con un trayecto superior a {{ config()!.maxDeliveryMinutes }} min desde el origen no se admitirán en el checkout.</p>
+
+          <div class="surcharge-divider"></div>
+          <h4 class="surcharge-title">Incremento por desplazamiento</h4>
+          <p class="text-muted small mb-3">Cargo adicional en el pedido para clientes en zona Media o Lejos. "Cerca" no lleva incremento.</p>
+
+          <div class="surcharge-row" *ngFor="let type of ['medium', 'far']">
+            <span class="surcharge-proximity-label">{{ getProximityLabel(type) }}</span>
+            <div class="surcharge-inputs">
+              <select [(ngModel)]="config()!.deliverySurcharges[type].type">
+                <option value="fixed">Importe fijo (€)</option>
+                <option value="perKm">€ por km</option>
+              </select>
+              <input type="number" [(ngModel)]="config()!.deliverySurcharges[type].amount" min="0" step="0.5">
+            </div>
+          </div>
+        </div>
+
+        <!-- Block 4: Bloqueo de Citas -->
+        <div class="admin-card">
+          <h3 class="title-font mb-3">4. Bloqueo de Citas</h3>
+          <p class="text-muted small mb-4">Minutos a bloquear antes y después de cada reserva según proximidad.</p>
+
           <div class="blocking-grid">
             <div class="blocking-section" *ngFor="let type of ['near', 'medium', 'far']">
                <h4 class="proximity-label">{{ getProximityLabel(type) }}</h4>
@@ -220,6 +264,16 @@ import { ConfirmDialogService } from '../../services/confirm-dialog.service';
       background-color: #f8fafc; color: var(--primary); outline: none; transition: all 0.2s;
     }
     .form-group select:focus { border-color: var(--secondary); background-color: white; box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1); }
+    .threshold-hint { font-size: 0.8rem; margin-top: 0.6rem; }
+
+    .surcharge-divider { height: 1px; background: #f1f5f9; margin: 1.25rem 0 1rem; }
+    .surcharge-title { font-size: 0.95rem; color: var(--primary); margin-bottom: 0.3rem; }
+    .surcharge-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid #f8fafc; }
+    .surcharge-row:last-child { border-bottom: none; }
+    .surcharge-proximity-label { text-transform: capitalize; font-size: 0.85rem; font-weight: 700; color: var(--primary); min-width: 70px; }
+    .surcharge-inputs { display: flex; gap: 0.6rem; flex: 1; max-width: 320px; }
+    .surcharge-inputs select { flex: 1.3; }
+    .surcharge-inputs input { flex: 1; }
 
     /* Modal */
     /* Modal centering & styling */
@@ -407,8 +461,8 @@ export class AppointmentManagerComponent implements OnInit {
     this.toastService.success('Periodo gestionado correctamente');
   }
 
-  prevMonth() { this.currentDate.setMonth(this.currentDate.getMonth() - 1); this.generateCalendar(); }
-  nextMonth() { this.currentDate.setMonth(this.currentDate.getMonth() + 1); this.generateCalendar(); }
+  prevMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1); this.generateCalendar(); }
+  nextMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1); this.generateCalendar(); }
 
   get currentMonthName(): string {
     return this.currentDate.toLocaleString('es-ES', { month: 'long' });

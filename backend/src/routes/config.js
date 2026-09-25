@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../config/prisma');
+const { verifyToken, isAdmin } = require('../middleware/auth');
 
 // Get the appointment configuration
 router.get('/appointment', async (req, res) => {
@@ -21,7 +22,7 @@ router.get('/appointment', async (req, res) => {
 });
 
 // Update the appointment configuration
-router.post('/appointment', async (req, res) => {
+router.post('/appointment', verifyToken, isAdmin, async (req, res) => {
     try {
         const updatedConfig = await prisma.configuration.upsert({
             where: { id: 'disponibilidad' },

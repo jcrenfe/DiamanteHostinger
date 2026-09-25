@@ -30,15 +30,42 @@ export interface ProximityBlock {
 
 export interface ProximityConfig {
     [key: string]: ProximityBlock;
-    near: ProximityBlock;   
-    medium: ProximityBlock; 
-    far: ProximityBlock;    
+    near: ProximityBlock;
+    medium: ProximityBlock;
+    far: ProximityBlock;
+}
+
+export interface ProximityThresholds {
+    // Tiempo de trayecto (minutos) desde originAddress, calculado con la Routes API de Google.
+    // near:   0 .. nearMaxMinutes
+    // medium: nearMaxMinutes .. mediumMaxMinutes
+    // far:    > mediumMaxMinutes
+    nearMaxMinutes: number;
+    mediumMaxMinutes: number;
+}
+
+export interface DeliverySurchargeRule {
+    type: 'fixed' | 'perKm';
+    amount: number;
+}
+
+export interface DeliverySurcharges {
+    // "Cerca" no lleva incremento. Solo Media y Lejos.
+    [key: string]: DeliverySurchargeRule;
+    medium: DeliverySurchargeRule;
+    far: DeliverySurchargeRule;
 }
 
 export interface AppointmentConfig {
-    deliveryDays: string[]; 
-    dailySlots: DailySlots; 
+    deliveryDays: string[];
+    dailySlots: DailySlots;
     blockingRules: ProximityConfig;
+    originAddress: string;
+    proximityThresholds: ProximityThresholds;
+    // Radio máximo de reparto: por encima de este tiempo de trayecto (min) desde
+    // originAddress, no se admiten pedidos.
+    maxDeliveryMinutes: number;
+    deliverySurcharges: DeliverySurcharges;
 }
 
 @Injectable({
@@ -63,6 +90,16 @@ export class AppointmentService {
             near: { beforeMinutes: 60, afterMinutes: 30 },
             medium: { beforeMinutes: 90, afterMinutes: 60 },
             far: { beforeMinutes: 120, afterMinutes: 90 }
+        },
+        originAddress: '',
+        proximityThresholds: {
+            nearMaxMinutes: 15,
+            mediumMaxMinutes: 30
+        },
+        maxDeliveryMinutes: 60,
+        deliverySurcharges: {
+            medium: { type: 'fixed', amount: 0 },
+            far: { type: 'fixed', amount: 0 }
         }
     };
 
@@ -71,116 +108,71 @@ export class AppointmentService {
         return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
     }
 
-    async getAvailableSlots(dateStr: string, proximity: 'near' | 'medium' | 'far' = 'near'): Promise<TimeSlot[]> {
-        const config = await this.getConfig();
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const date = new Date(y, m - 1, d);
-        const weekday = date.getDay().toString();
-        
-        if (!config.deliveryDays.includes(dateStr)) {
+    /** Reservas ocupadas (endpoint público, sin datos personales) entre dos fechas. */
+    private async getOccupancy(query: string): Promise<{ date: string; timeSlot: string; proximity: 'near' | 'medium' | 'far' | null }[]> {
+        try {
+            return await firstValueFrom(this.http.get<any[]>(`${this.API_URL}/orders/occupancy?${query}`));
+        } catch (e) {
+            console.error(e);
             return [];
         }
-
-        const ranges = config.dailySlots[weekday] || [];
-        if (ranges.length === 0) return [];
-
-        let allPossibleSlots: string[] = [];
-        ranges.forEach(range => {
-            let current = this.timeToMinutes(range.start);
-            const end = this.timeToMinutes(range.end);
-            while (current < end) {
-                allPossibleSlots.push(this.minutesToTime(current));
-                current += 30; 
-            }
-        });
-
-        // Get existing appointments
-        let orders: any[] = [];
-        try {
-            orders = await firstValueFrom(this.http.get<any[]>(`${this.API_URL}/orders?date=${dateStr}`, { headers: this.getHeaders() }));
-        } catch(e) {
-            console.error(e);
-        }
-
-        const blockedMinutes = new Set<number>();
-        
-        orders.forEach(data => {
-            if (data.status === 'cancelled') return;
-            const delivery = data.delivery || { timeSlot: data.delivery_timeSlot, time: data.delivery_timeSlot };
-            if (delivery && (delivery.timeSlot || delivery.time)) {
-                const timeStr = delivery.timeSlot || delivery.time;
-                const centerMin = this.timeToMinutes(timeStr);
-                
-                blockedMinutes.add(centerMin);
-
-                const rule = config.blockingRules[proximity];
-                if (rule) {
-                    for (let m = centerMin - 30; m >= centerMin - rule.beforeMinutes; m -= 30) {
-                        blockedMinutes.add(m);
-                    }
-                    for (let m = centerMin + 30; m <= centerMin + rule.afterMinutes; m += 30) {
-                        blockedMinutes.add(m);
-                    }
-                }
-            }
-        });
-
-        return allPossibleSlots.map(time => ({
-            time,
-            available: !blockedMinutes.has(this.timeToMinutes(time))
-        }));
     }
 
-    async getMonthAvailability(
-        year: number,
-        month: number, 
-        proximity: 'near' | 'medium' | 'far' = 'near'
-    ): Promise<Record<string, { available: boolean, reason?: string }>> {
+    /** Minutos bloqueados por cada reserva según SU proximidad (calculada con Google Maps al hacer el pedido). */
+    private blockedByDate(occupancy: { date: string; timeSlot: string; proximity: string | null }[], config: AppointmentConfig): Map<string, Set<number>> {
+        const byDate = new Map<string, Set<number>>();
+        occupancy.forEach(o => {
+            if (!o.date || !o.timeSlot) return;
+            const set = byDate.get(o.date) || new Set<number>();
+            byDate.set(o.date, set);
+            const center = this.timeToMinutes(o.timeSlot);
+            const rule = config.blockingRules[o.proximity || 'near'] || config.blockingRules['near'];
+            set.add(center);
+            if (rule) {
+                for (let m = center - 30; m >= center - rule.beforeMinutes; m -= 30) set.add(m);
+                for (let m = center + 30; m <= center + rule.afterMinutes; m += 30) set.add(m);
+            }
+        });
+        return byDate;
+    }
+
+    /** Horas configuradas para la fecha; si es hoy, descarta las que ya han pasado. */
+    private configuredSlots(config: AppointmentConfig, dateStr: string): number[] {
+        if (!config.deliveryDays || !config.deliveryDays.includes(dateStr)) return [];
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const ranges = config.dailySlots[new Date(y, m - 1, d).getDay().toString()] || [];
+        const slots: number[] = [];
+        ranges.forEach(range => {
+            for (let c = this.timeToMinutes(range.start); c < this.timeToMinutes(range.end); c += 30) slots.push(c);
+        });
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+        if (dateStr === todayStr) {
+            const nowMin = now.getHours() * 60 + now.getMinutes();
+            return slots.filter(c => c > nowMin);
+        }
+        return slots;
+    }
+
+    async getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
+        const config = await this.getConfig();
+        const slots = this.configuredSlots(config, dateStr);
+        if (slots.length === 0) return [];
+
+        const occupancy = (await this.getOccupancy(`date=${dateStr}`)).filter(o => o.date === dateStr);
+        const blocked = this.blockedByDate(occupancy, config).get(dateStr) || new Set<number>();
+        return slots.map(m => ({ time: this.minutesToTime(m), available: !blocked.has(m) }));
+    }
+
+    async getMonthAvailability(year: number, month: number): Promise<Record<string, { available: boolean, reason?: string }>> {
         const config = await this.getConfig();
         const result: Record<string, { available: boolean, reason?: string }> = {};
 
         const pad = (n: number) => n.toString().padStart(2, '0');
         const monthNum = month + 1;
-        const startDateStr = `${year}-${pad(monthNum)}-01`;
         const lastDay = new Date(year, monthNum, 0).getDate();
-        const endDateStr = `${year}-${pad(monthNum)}-${pad(lastDay)}`;
-
-        let orders: any[] = [];
-        try {
-            // Get all orders for this month (we can do filtering in backend or fetch all and filter in frontend)
-            orders = await firstValueFrom(this.http.get<any[]>(`${this.API_URL}/orders?start=${startDateStr}&end=${endDateStr}`, { headers: this.getHeaders() }));
-        } catch(e) {
-            console.error(e);
-        }
-
-        const dateBlockedMinutes = new Map<string, Set<number>>();
-        orders.forEach(data => {
-            if (data.status === 'cancelled') return;
-            const delivery = data.delivery || { date: data.delivery_date, timeSlot: data.delivery_timeSlot };
-            if (delivery && delivery.date) {
-                const timeStr = delivery.timeSlot || delivery.time;
-                if (timeStr) {
-                    const dateStr = delivery.date;
-                    const centerMin = this.timeToMinutes(timeStr);
-
-                    if (!dateBlockedMinutes.has(dateStr)) {
-                        dateBlockedMinutes.set(dateStr, new Set<number>());
-                    }
-                    const blockedSet = dateBlockedMinutes.get(dateStr)!;
-                    blockedSet.add(centerMin);
-
-                    const rule = config.blockingRules[proximity] || config.blockingRules['near'];
-                    if (rule) {
-                        for (let m = centerMin - 30; m >= centerMin - rule.beforeMinutes; m -= 30) {
-                            blockedSet.add(m);
-                        }
-                        for (let m = centerMin + 30; m <= centerMin + rule.afterMinutes; m += 30) {
-                            blockedSet.add(m);
-                        }
-                    }
-                }
-            }
-        });
+        const occupancy = await this.getOccupancy(`start=${year}-${pad(monthNum)}-01&end=${year}-${pad(monthNum)}-${pad(lastDay)}`);
+        const blockedByDate = this.blockedByDate(occupancy, config);
 
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
@@ -192,44 +184,24 @@ export class AppointmentService {
                 result[dateStr] = { available: false, reason: 'Día pasado' };
                 continue;
             }
-
             if (!config.deliveryDays || !config.deliveryDays.includes(dateStr)) {
                 result[dateStr] = { available: false, reason: 'No disponible para reparto' };
                 continue;
             }
-
-            const dateObj = new Date(year, month, day);
-            const weekday = dateObj.getDay().toString();
-            const ranges = config.dailySlots[weekday] || [];
-
-            if (ranges.length === 0) {
+            const weekday = new Date(year, month, day).getDay().toString();
+            if ((config.dailySlots[weekday] || []).length === 0) {
                 result[dateStr] = { available: false, reason: 'Sin horario configurado' };
                 continue;
             }
-
-            const possibleSlots: number[] = [];
-            ranges.forEach(range => {
-                let current = this.timeToMinutes(range.start);
-                const end = this.timeToMinutes(range.end);
-                while (current < end) {
-                    possibleSlots.push(current);
-                    current += 30;
-                }
-            });
-
-            if (possibleSlots.length === 0) {
-                result[dateStr] = { available: false, reason: 'Sin tramos posibles' };
+            const possible = this.configuredSlots(config, dateStr);
+            if (possible.length === 0) {
+                result[dateStr] = { available: false, reason: dateStr === todayStr ? 'Sin horas libres hoy' : 'Sin tramos posibles' };
                 continue;
             }
-
-            const blockedSet = dateBlockedMinutes.get(dateStr) || new Set<number>();
-            const freeSlotsCount = possibleSlots.filter(m => !blockedSet.has(m)).length;
-
-            if (freeSlotsCount > 0) {
-                result[dateStr] = { available: true };
-            } else {
-                result[dateStr] = { available: false, reason: 'Todas las horas bloqueadas' };
-            }
+            const blocked = blockedByDate.get(dateStr) || new Set<number>();
+            result[dateStr] = possible.some(m => !blocked.has(m))
+                ? { available: true }
+                : { available: false, reason: 'Todas las horas bloqueadas' };
         }
 
         return result;
@@ -249,17 +221,27 @@ export class AppointmentService {
     async getConfig(): Promise<AppointmentConfig> {
         try {
             const config = await firstValueFrom(this.http.get<AppointmentConfig>(`${this.API_URL}/config/appointment`, { headers: this.getHeaders() }));
-            return config || this.defaultConfig;
+            if (!config) return this.defaultConfig;
+            // Fusiona con los valores por defecto para no romper configuraciones guardadas
+            // antes de añadir originAddress/proximityThresholds.
+            return {
+                ...this.defaultConfig,
+                ...config,
+                proximityThresholds: {
+                    ...this.defaultConfig.proximityThresholds,
+                    ...(config.proximityThresholds || {})
+                },
+                deliverySurcharges: {
+                    medium: { ...this.defaultConfig.deliverySurcharges.medium, ...(config.deliverySurcharges?.medium || {}) },
+                    far: { ...this.defaultConfig.deliverySurcharges.far, ...(config.deliverySurcharges?.far || {}) }
+                }
+            };
         } catch(e) {
             return this.defaultConfig;
         }
     }
 
     async saveConfig(config: AppointmentConfig) {
-        try {
-            await firstValueFrom(this.http.post(`${this.API_URL}/config/appointment`, config, { headers: this.getHeaders() }));
-        } catch(e) {
-            console.error("Error saving config", e);
-        }
+        await firstValueFrom(this.http.post(`${this.API_URL}/config/appointment`, config, { headers: this.getHeaders() }));
     }
 }

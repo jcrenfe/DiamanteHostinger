@@ -8,6 +8,17 @@ function getPool() {
     return pool;
 }
 
+// Tablas que tienen columna createdAt/updatedAt sin DEFAULT en MySQL para updatedAt,
+// por lo que el propio wrapper debe rellenarlas (Prisma real lo hace vía @default(now())/@updatedAt).
+const TIMESTAMP_COLUMNS = {
+    Product: { createdAt: true, updatedAt: true },
+    Campaign: { createdAt: true, updatedAt: true },
+    Offer: { createdAt: true, updatedAt: true },
+    Order: { createdAt: true, updatedAt: true },
+    User: { createdAt: true, updatedAt: true },
+    Category: { createdAt: true, updatedAt: false },
+};
+
 function parseJsonFields(row) {
     if (!row) return row;
     const res = { ...row };
@@ -75,7 +86,16 @@ function createModelHandler(tableName) {
         },
 
         async create(args = {}) {
-            const data = args.data || {};
+            const data = { ...(args.data || {}) };
+            const ts = TIMESTAMP_COLUMNS[tableName];
+            if (ts) {
+                // createdAt/updatedAt están gestionados por el wrapper (como haría Prisma real),
+                // así que se ignora cualquier valor que llegue del cliente (p.ej. una copia de un
+                // registro existente reenviada con sus timestamps en formato ISO, que MySQL rechaza).
+                const now = new Date();
+                if (ts.createdAt) data.createdAt = now;
+                if (ts.updatedAt) data.updatedAt = now;
+            }
             const keys = Object.keys(data);
             const cols = keys.map(k => `\`${k}\``).join(', ');
             const placeholders = keys.map(() => '?').join(', ');
@@ -98,8 +118,16 @@ function createModelHandler(tableName) {
         },
 
         async update(args = {}) {
-            const { where, data } = args;
-            if (!where || !data) return null;
+            const { where } = args;
+            const data = { ...(args.data || {}) };
+            if (!where || !args.data) return null;
+            const ts = TIMESTAMP_COLUMNS[tableName];
+            if (ts) {
+                // createdAt es inmutable y updatedAt se recalcula siempre, ignorando lo que
+                // el cliente reenvíe (p.ej. el propio registro con timestamps ISO que MySQL rechaza).
+                if (ts.createdAt) delete data.createdAt;
+                if (ts.updatedAt) data.updatedAt = new Date();
+            }
             const whereKey = Object.keys(where)[0];
             const whereVal = where[whereKey];
 
@@ -149,6 +177,21 @@ const db = {
     user: createModelHandler('User'),
     campaign: createModelHandler('Campaign'),
     configuration: createModelHandler('Configuration'),
+    // Exclusión mutua entre instancias mediante GET_LOCK de MySQL (el bloqueo vive en su conexión dedicada).
+    $withLock: async (name, timeoutSec, fn) => {
+        const conn = await getPool().getConnection();
+        try {
+            const [[row]] = await conn.query('SELECT GET_LOCK(?, ?) AS ok', [name, timeoutSec]);
+            if (row.ok !== 1) throw new Error(`No se pudo obtener el bloqueo ${name}`);
+            try {
+                return await fn();
+            } finally {
+                await conn.query('SELECT RELEASE_LOCK(?)', [name]);
+            }
+        } finally {
+            conn.release();
+        }
+    },
     $queryRaw: async (query, ...params) => {
         const [rows] = await getPool().query(query, params);
         return rows;

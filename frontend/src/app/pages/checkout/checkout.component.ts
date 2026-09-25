@@ -5,7 +5,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CartStore } from '../../store/cart.store';
 import { AuthStore } from '../../store/auth.store';
-import { OrderService, OrderData } from '../../services/order.service';
+import { OrderService, OrderData, DeliveryCheckResult } from '../../services/order.service';
 import { AppointmentService, TimeSlot } from '../../services/appointment.service';
 import { HeaderComponent } from '../../components/header/header.component';
 import { DeliveryCalendarComponent } from '../../components/delivery-calendar/delivery-calendar.component';
@@ -65,17 +65,28 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
                 <h3 class="title-font">2. Entrega</h3>
                 <div class="form-group">
                   <label>Dirección de Envío</label>
-                  <input type="text" formControlName="address" placeholder="Calle, número, piso...">
+                  <input type="text" formControlName="address" placeholder="Calle, número, piso..." (blur)="checkAddress()">
                 </div>
                 <div class="form-row">
                   <div class="form-group">
                     <label>Ciudad</label>
-                    <input type="text" formControlName="city" placeholder="Ej. Madrid">
+                    <input type="text" formControlName="city" placeholder="Ej. Madrid" (blur)="checkAddress()">
                   </div>
                   <div class="form-group">
                     <label>Código Postal</label>
-                    <input type="text" formControlName="zip" placeholder="28001">
+                    <input type="text" formControlName="zip" placeholder="28001" (blur)="checkAddress()">
                   </div>
+                </div>
+
+                <div class="delivery-check-status checking" *ngIf="checkingAddress()">
+                  <small>Comprobando dirección…</small>
+                </div>
+                <div class="delivery-check-status ok" *ngIf="!checkingAddress() && deliveryCheck()?.checked && deliveryCheck()?.valid">
+                  <small *ngIf="(deliveryCheck()!.surchargeAmount || 0) > 0">🚚 Se aplicará un incremento por desplazamiento de {{ deliveryCheck()!.surchargeAmount | number:'1.2-2' }}€.</small>
+                  <small *ngIf="!(deliveryCheck()!.surchargeAmount || 0)">✅ Dirección dentro de nuestro radio de reparto.</small>
+                </div>
+                <div class="delivery-check-status error" *ngIf="!checkingAddress() && deliveryCheck() && deliveryCheck()!.valid === false">
+                  <small>⚠️ {{ deliveryCheckErrorMessage() }}</small>
                 </div>
                 
                 <!-- Calendario de Selección de Fecha -->
@@ -114,8 +125,8 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
                 </div>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-lg btn-block mt-4" [disabled]="checkoutForm.invalid || isSubmitting()">
-                {{ isSubmitting() ? 'Procesando...' : 'Confirmar y Pagar ' + (cart.totalPrice() | number:'1.2-2') + '€' }}
+              <button type="submit" class="btn btn-primary btn-lg btn-block mt-4" [disabled]="checkoutForm.invalid || isSubmitting() || checkingAddress() || deliveryCheck()?.valid === false">
+                {{ isSubmitting() ? 'Procesando...' : 'Confirmar y Pagar ' + (displayTotal() | number:'1.2-2') + '€' }}
               </button>
             </form>
           </ng-template>
@@ -132,7 +143,7 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
                   <span class="item-name">{{ item.product.name }}</span>
                   <span class="item-price">{{ (item.product.price || 0) * item.quantity | number:'1.2-2' }}€</span>
                 </div>
-                
+
                 <div class="item-controls mt-2">
                   <div class="quantity-picker">
                     <button class="qty-btn" (click)="handleUpdateQuantity(item.product.id, item.quantity - 1)" [disabled]="item.quantity <= 1">
@@ -143,19 +154,26 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
                       <span>+</span>
                     </button>
                   </div>
-                  
+
                   <button class="remove-btn" (click)="handleRemoveItem(item.product.id, item.product.name ?? '')" title="Eliminar producto">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                   </button>
+                </div>
+              </div>
+
+              <div class="summary-item-card surcharge-item" *ngIf="deliveryCheck()?.checked && deliveryCheck()?.valid && (deliveryCheck()!.surchargeAmount || 0) > 0">
+                <div class="item-info">
+                  <span class="item-name">🚚 Incremento por desplazamiento</span>
+                  <span class="item-price">{{ deliveryCheck()!.surchargeAmount | number:'1.2-2' }}€</span>
                 </div>
               </div>
             </div>
             <div class="divider"></div>
             <div class="summary-total">
               <span>Total</span>
-              <span>{{ cart.totalPrice() | number:'1.2-2' }}€</span>
+              <span>{{ displayTotal() | number:'1.2-2' }}€</span>
             </div>
-            
+
             <div class="trust-badges mt-4">
                <div class="badge-item">🛡️ Pago 100% Seguro</div>
                <div class="badge-item">🚚 Envío Local Garantizado</div>
@@ -207,6 +225,12 @@ const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeF
       transition: border-color 0.3s;
     }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--secondary); }
+    .delivery-check-status { margin-top: -0.8rem; margin-bottom: 1.5rem; font-size: 0.85rem; }
+    .delivery-check-status.checking { color: var(--text-muted); }
+    .delivery-check-status.ok { color: #1e7e34; }
+    .delivery-check-status.error { color: #c0392b; font-weight: 600; }
+    .surcharge-item .item-name { color: var(--secondary); font-style: italic; }
+    .surcharge-item .item-price { color: var(--secondary); }
     .summary-card { background: #fdfaf7; padding: 2rem; border-radius: 12px; border: 1px solid #f0e2d1; }
     .summary-items { margin: 1.5rem 0; display: flex; flex-direction: column; gap: 1.25rem; }
     
@@ -339,6 +363,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   orderId = signal('');
   sessionId = signal('');
   availableSlots = signal<TimeSlot[]>([]);
+  checkingAddress = signal(false);
+  deliveryCheck = signal<DeliveryCheckResult | null>(null);
+  private lastCheckedAddressKey = '';
   private checkoutInstance: any = null;
   private unsubscribeOrderListener: any = null;
   private stripeMessageListener: any = null;
@@ -472,6 +499,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
           }
           this.showStripeCheckout.set(true);
           setTimeout(() => this.mountStripe(paymentParams.clientSecret), 150);
+        } else if (paymentParams?.reason === 'slot_unavailable') {
+          this.toastService.error('La hora de entrega de este pedido ya no está disponible. Haz un nuevo pedido eligiendo otra hora.');
         }
       } else {
         this.isSubmitting.set(false);
@@ -486,6 +515,50 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   onDateSelected(dateStr: string) {
     this.checkoutForm.get('date')?.setValue(dateStr);
     this.checkoutForm.get('date')?.markAsTouched();
+  }
+
+  /**
+   * Comprueba en vivo (al salir del campo de dirección/ciudad/CP) si la dirección existe y
+   * está dentro del radio de reparto. Deduplicada: si la dirección no ha cambiado desde la
+   * última comprobación, no repite la llamada. La comprobación autoritativa (que de verdad
+   * bloquea el pedido) se repite en el servidor al enviar (ver onSubmit / OrderService.submitOrder).
+   */
+  async checkAddress() {
+    const { address, city, zip } = this.checkoutForm.value;
+    if (!address || !city || !zip) {
+      this.deliveryCheck.set(null);
+      this.lastCheckedAddressKey = '';
+      return;
+    }
+
+    const key = `${address}|${city}|${zip}`;
+    if (key === this.lastCheckedAddressKey) return;
+    this.lastCheckedAddressKey = key;
+
+    this.checkingAddress.set(true);
+    const result = await this.orderService.checkDeliveryDistance(address, city, zip);
+    // Si la dirección volvió a cambiar mientras esperábamos la respuesta, descartamos este resultado obsoleto
+    if (key === this.lastCheckedAddressKey) {
+      this.deliveryCheck.set(result);
+      this.checkingAddress.set(false);
+    }
+  }
+
+  displayTotal(): number {
+    const surcharge = this.deliveryCheck()?.valid ? (this.deliveryCheck()?.surchargeAmount || 0) : 0;
+    return this.cart.totalPrice() + surcharge;
+  }
+
+  deliveryCheckErrorMessage(): string {
+    const check = this.deliveryCheck();
+    if (!check) return '';
+    if (check.reason === 'address_not_found') {
+      return 'No hemos podido localizar esa dirección. Revísala e inténtalo de nuevo.';
+    }
+    if (check.reason === 'too_far') {
+      return `Tu dirección está a ${check.durationMinutes} min de trayecto, fuera de nuestro radio de reparto (máx. ${check.maxDeliveryMinutes} min).`;
+    }
+    return 'No podemos procesar el pedido con esa dirección.';
   }
 
   private setupStripeErrorDetector() {
@@ -660,6 +733,13 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   async onSubmit() {
     if (this.checkoutForm.invalid) return;
 
+    // Asegura que la comprobación de distancia corresponde a la dirección actual del formulario
+    await this.checkAddress();
+    if (this.deliveryCheck()?.valid === false) {
+      this.toastService.error(this.deliveryCheckErrorMessage());
+      return;
+    }
+
     this.isSubmitting.set(true);
 
     const formVal = this.checkoutForm.value;
@@ -689,7 +769,10 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         this.orderId.set(orderIdToPay);
         this.listenToOrderStatus(docIdToListen);
 
-        const paymentParams: any = await this.orderService.initPayment(orderData.total, orderIdToPay);
+        // Usamos el total autoritativo devuelto por el servidor (incluye el incremento por
+        // desplazamiento calculado en servidor), no el subtotal local sin incremento.
+        const amountToCharge = result.total ?? orderData.total;
+        const paymentParams: any = await this.orderService.initPayment(amountToCharge, orderIdToPay);
 
         if (paymentParams && paymentParams.clientSecret) {
           if (paymentParams.sessionId) {
@@ -703,13 +786,28 @@ export class CheckoutComponent implements OnInit, OnDestroy {
             await this.mountStripe(paymentParams.clientSecret);
           }, 150);
 
+        } else if (paymentParams?.reason === 'slot_unavailable') {
+          this.toastService.error(paymentParams.message || 'La hora de entrega elegida ya no está disponible. Elige otra.');
+          this.isSubmitting.set(false);
+          const date = this.checkoutForm.get('date')?.value;
+          this.checkoutForm.get('timeSlot')?.setValue('');
+          if (date) this.availableSlots.set(await this.appointmentService.getAvailableSlots(date));
         } else {
           this.toastService.error('Error al generar la pasarela de pago con Stripe.');
           this.isSubmitting.set(false);
           await this.handlePaymentFailure(orderIdToPay);
         }
       } else {
-        this.toastService.error('Hubo un error al guardar tu pedido.');
+        if (result.reason === 'too_far' || result.reason === 'address_not_found') {
+          this.toastService.error(result.message || 'Tu dirección está fuera de nuestro radio de reparto.');
+        } else if (result.reason === 'slot_unavailable') {
+          this.toastService.error(result.message || 'La hora de entrega elegida ya no está disponible. Elige otra.');
+          const date = this.checkoutForm.get('date')?.value;
+          this.checkoutForm.get('timeSlot')?.setValue('');
+          if (date) this.availableSlots.set(await this.appointmentService.getAvailableSlots(date));
+        } else {
+          this.toastService.error('Hubo un error al guardar tu pedido.');
+        }
         this.isSubmitting.set(false);
       }
     } catch (err: any) {

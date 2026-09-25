@@ -53,6 +53,7 @@ model Order {
   id                    String   @id @default(uuid())
   redsysOrderId         String?  @unique
   stripeSessionId       String?
+  stripePaymentIntent   String?
 
   // Customer info
   customer_uid          String?
@@ -67,6 +68,10 @@ model Order {
   delivery_date         String
   delivery_timeSlot     String
   delivery_message      String?  @db.Text
+  delivery_distanceKm   Float?
+  delivery_durationMin  Int?
+  delivery_proximity    String?
+  delivery_surchargeAmount Float?
 
   total                 Float
   status                String   @default("pending") // pending, paid, delivered, cancelled
