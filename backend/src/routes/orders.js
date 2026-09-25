@@ -40,6 +40,18 @@ router.get('/', verifyToken, async (req, res) => {
     }
 });
 
+// GET /api/orders/:id/status - Estado de un pedido (pública, solo devuelve el estado, sin datos personales).
+// La usa el checkout, también para clientes sin sesión, para saber si el pago se ha completado o cancelado.
+router.get('/:id/status', async (req, res) => {
+    try {
+        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+        res.json({ status: order.status });
+    } catch (e) {
+        res.status(500).json({ error: 'Error al obtener el estado del pedido' });
+    }
+});
+
 // GET /api/orders/:id - Obtener un pedido específico
 router.get('/:id', verifyToken, async (req, res) => {
     try {

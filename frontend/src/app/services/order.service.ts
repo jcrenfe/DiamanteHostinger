@@ -49,9 +49,8 @@ export class OrderService {
 
     private getHeaders() {
         const token = localStorage.getItem('token');
-        return new HttpHeaders({
-            'Authorization': `Bearer ${token}`
-        });
+        // Sin sesión no se envía "Bearer null": el servidor lo registraría como token malformado
+        return token ? new HttpHeaders({ 'Authorization': `Bearer ${token}` }) : new HttpHeaders();
     }
 
     async submitOrder(order: OrderData): Promise<{ success: boolean, orderId?: string, redsysOrderId?: string, reason?: string, message?: string, total?: number }> {
@@ -123,6 +122,16 @@ export class OrderService {
             return true;
         } catch (err) {
             return false;
+        }
+    }
+
+    /** Estado del pedido (endpoint público, válido también para clientes sin sesión). */
+    async getOrderStatus(orderId: string): Promise<string | null> {
+        try {
+            const res = await firstValueFrom(this.http.get<{ status: string }>(`${this.API_URL}/${orderId}/status`));
+            return res?.status ?? null;
+        } catch (err) {
+            return null;
         }
     }
 

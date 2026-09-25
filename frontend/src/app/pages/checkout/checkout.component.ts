@@ -402,9 +402,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     }
 
     this.unsubscribeOrderListener = setInterval(async () => {
-      const order = await this.orderService.getOrderById(orderDocId);
-      if (order) {
-        if (order.status === 'cancelled' && (this.showStripeCheckout() || this.isSubmitting())) {
+      const status = await this.orderService.getOrderStatus(orderDocId);
+      if (status) {
+        if (status === 'cancelled' && (this.showStripeCheckout() || this.isSubmitting())) {
           if (this.unsubscribeOrderListener) {
             clearInterval(this.unsubscribeOrderListener);
             this.unsubscribeOrderListener = null;
@@ -424,7 +424,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
             type: 'danger'
           });
           this.router.navigate(['/productos']);
-        } else if (order.status === 'paid') {
+        } else if (status === 'paid') {
             if (this.unsubscribeOrderListener) {
                 clearInterval(this.unsubscribeOrderListener);
                 this.unsubscribeOrderListener = null;

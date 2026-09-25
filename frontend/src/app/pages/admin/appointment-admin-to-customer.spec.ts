@@ -252,6 +252,15 @@ describe('Panel de disponibilidad (admin) → calendario del cliente', () => {
       expect(lastToast().type).toBe('error');
     });
 
+    it('con la sesión caducada (401) el aviso indica cerrar sesión y volver a entrar', async () => {
+      const f = await openAdmin();
+      const comp = f.componentInstance as AppointmentManagerComponent;
+      fake.saveStatus = 401;
+      await comp.saveConfig();
+      expect(lastToast().type).toBe('error');
+      expect(lastToast().message).toContain('sesión');
+    });
+
     it('si el guardado falla, los cambios deben seguir marcados como pendientes', async () => {
       const f = await openAdmin();
       const comp = f.componentInstance as AppointmentManagerComponent;

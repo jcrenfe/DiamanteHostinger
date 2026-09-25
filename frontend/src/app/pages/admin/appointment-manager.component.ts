@@ -613,8 +613,10 @@ export class AppointmentManagerComponent implements OnInit {
       await this.appointmentService.saveConfig(this.config()!);
       this.isModified.set(false);
       this.toastService.success('Configuración de disponibilidad guardada');
-    } catch (err) {
-      this.toastService.error('Error al guardar la configuración');
+    } catch (err: any) {
+      this.toastService.error(err?.status === 401 || err?.status === 403
+        ? 'Tu sesión ha caducado o no tienes permisos. Cierra sesión y vuelve a entrar para guardar.'
+        : 'Error al guardar la configuración');
     } finally {
       this.loading.set(false);
     }
