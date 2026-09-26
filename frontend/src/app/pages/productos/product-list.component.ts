@@ -58,7 +58,7 @@ import { CategoryService } from '../../services/category.service';
     }
     .page-header {
       background: linear-gradient(rgba(139, 69, 19, 0.4), rgba(230, 126, 34, 0.2)), 
-                  url('/assets/images/desayuno_con_diamantes.png');
+                  url('/assets/images/desayuno_con_diamantes.webp');
       background-size: cover;
       background-position: center;
       padding: 6rem 0;

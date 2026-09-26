@@ -1,24 +1,17 @@
 // Login con Google: la identidad debe salir del ID token verificado, nunca de datos del cliente.
-process.env.JWT_SECRET = 'test-secret';
+// Base de datos real de pruebas.
+require('./helpers/env');
+const { src } = require('./helpers/stubs');
+const db = require('./helpers/db');
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 const crypto = require('node:crypto');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
-const src = (...p) => path.resolve(__dirname, '..', 'src', ...p);
-const users = [];
-require.cache[src('config', 'prisma.js')] = {
-    id: 'p', filename: src('config', 'prisma.js'), loaded: true, children: [], paths: [],
-    exports: {
-        user: {
-            findUnique: async ({ where }) => users.find(u => u.email === where.email) || null,
-            create: async ({ data }) => { users.push({ ...data }); return { ...data }; }
-        }
-    }
-};
+const users = () => db.client.user.findMany({ orderBy: { id: 'asc' } });
+const addUser = (data) => db.client.user.create({ data });
 
 const { setCertsProvider, PROJECT_ID } = require(src('services', 'googleIdToken.js'));
 const authRoutes = require(src('routes', 'auth.js'));
@@ -39,8 +32,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 let server; let base;
 test.before(async () => { await new Promise(r => { server = app.listen(0, r); }); base = `http://127.0.0.1:${server.address().port}/api/auth`; });
-test.after(() => server.close());
-test.beforeEach(() => { users.length = 0; });
+test.after(async () => { server.close(); await db.client.$disconnect(); });
+test.beforeEach(() => db.reset());
 
 const google = (body) => fetch(`${base}/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -50,12 +43,12 @@ test('un ID token válido crea el usuario con el email y uid verificados y devue
     const body = await res.json();
     assert.equal(body.user.email, 'ana@gmail.com');
     assert.equal(body.user.role, 'cliente');
-    assert.equal(users[0].uid, 'google-uid-1');
+    assert.equal((await users())[0].uid, 'google-uid-1');
     assert.equal(jwt.verify(body.token, 'test-secret').email, 'ana@gmail.com');
 });
 
 test('el formato antiguo (email sin token) ya no sirve: no se puede suplantar a nadie', async () => {
-    users.push({ uid: 'adm', email: 'admin@x.com', role: 'admin', displayName: 'Admin' });
+    await addUser({ uid: 'adm', email: 'admin@x.com', role: 'admin', displayName: 'Admin' });
     const res = await google({ email: 'admin@x.com', uid: 'adm', displayName: 'Admin' });
     assert.equal(res.status, 401);
 });
@@ -87,11 +80,11 @@ test('un token sin email verificado, "alg none" o basura se rechaza', async () =
 });
 
 test('un usuario existente conserva su rol (p. ej. admin) al entrar con Google', async () => {
-    users.push({ uid: 'adm-1', email: 'ana@gmail.com', role: 'admin', displayName: 'Ana' });
+    await addUser({ uid: 'adm-1', email: 'ana@gmail.com', role: 'admin', displayName: 'Ana' });
     const body = await (await google({ idToken: idToken() })).json();
     assert.equal(body.user.role, 'admin');
     assert.equal(body.user.uid, 'adm-1');
-    assert.equal(users.length, 1);
+    assert.equal((await users()).length, 1);
 });
 
 test('JWT_SECRET: en producción sin secreto el servidor no arranca', () => {

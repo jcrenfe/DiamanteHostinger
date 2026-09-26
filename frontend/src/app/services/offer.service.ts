@@ -20,6 +20,15 @@ export interface Offer {
     ribbonText?: string;
     ribbonColor?: string;
     ribbonTextColor?: string;
+    /** Colores de los textos de banners y cupones */
+    titleColor?: string;
+    descriptionColor?: string;
+    badgeColor?: string;
+    codeColor?: string;
+    /** Mostrar el % de descuento como banda en la esquina superior derecha, con sus colores */
+    discountCorner?: boolean;
+    discountColor?: string;
+    discountBgColor?: string;
 }
 
 @Injectable({

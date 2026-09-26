@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 require('dotenv').config();
+const { prisma } = require('../config/prisma');
+const { verifyToken, isAdmin } = require('../middleware/auth');
 const { checkDeliveryDistance } = require('../services/deliveryDistance');
+const { computeMatrix, MAX_STOPS } = require('../services/routeMatrix');
+const { planRoute } = require('../services/routePlanner');
 
 const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
-const MOCK_MODE = !GOOGLE_MAPS_KEY;
+const INACTIVE_STATUSES = ['cancelled', 'refunded', 'paid_conflict', 'failed'];
 
 /**
  * Comprueba si una dirección de entrega existe y está dentro del radio de reparto
@@ -29,102 +31,73 @@ router.post('/check-delivery', async (req, res) => {
 });
 
 /**
- * Route Optimization API (Enterprise Level)
+ * Ruta recomendada para UN repartidor con los pedidos que el administrador elige.
+ * Usa la matriz de tiempos de la Routes API y respeta la franja de entrega de cada pedido.
+ * Origen: la dirección configurada en el panel de disponibilidad.
  */
-router.post('/optimize', async (req, res) => {
-    const { orders, drivers = 1, marginMinutes = 10, optimizeFor = 'time' } = req.body;
-
-    if (!orders || orders.length === 0) {
-        return res.status(400).json({ success: false, message: "No hay pedidos." });
+router.post('/optimize', verifyToken, isAdmin, async (req, res) => {
+    const { date, orderIds, marginMinutes } = req.body || {};
+    const ids = Array.isArray(orderIds) ? [...new Set(orderIds.map(String))] : [];
+    if (!date || !ids.length) {
+        return res.status(400).json({ success: false, message: 'Elige al menos un pedido.' });
     }
-
+    if (ids.length > MAX_STOPS) {
+        return res.status(400).json({ success: false, message: `Puedes elegir como máximo ${MAX_STOPS} pedidos por ruta.` });
+    }
+    if (!GOOGLE_MAPS_KEY) {
+        return res.status(503).json({ success: false, message: 'Google Maps no está configurado en el servidor.' });
+    }
     try {
-        if (MOCK_MODE) {
-            return res.json({ success: true, ...simulateOptimization(orders, drivers, marginMinutes) });
+        const configDoc = await prisma.configuration.findUnique({ where: { id: 'disponibilidad' } });
+        const originAddress = configDoc?.value?.originAddress;
+        if (!originAddress) {
+            return res.status(400).json({ success: false, message: 'Configura la dirección de origen en el panel de disponibilidad.' });
         }
 
-        const url = `https://routeoptimization.googleapis.com/v1/projects/${PROJECT_ID}:optimizeTours`;
-
-        // Define the Fleet Optimization Model
-        const model = {
-            shipments: orders.map((order, index) => ({
-                pickups: [{
-                    arrivalAddress: "Calle de la Princesa, 1, Madrid", // Start at Shop
-                    duration: "300s" // Time to load
-                }],
-                deliveries: [{
-                    arrivalAddress: order.address,
-                    duration: `${marginMinutes * 60}s` // Margin as service duration
-                }],
-                label: `order_${index}`
-            })),
-            vehicles: Array.from({ length: drivers }, (_, i) => ({
-                label: `driver_${i + 1}`,
-                startLocation: { address: "Calle de la Princesa, 1, Madrid" },
-                endLocation: { address: "Calle de la Princesa, 1, Madrid" },
-                costPerKilometer: optimizeFor === 'distance' ? 10 : 1 // High cost per KM if optimizing for distance
-            }))
-        };
-
-        const response = await axios.post(url, { model }, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Goog-Api-Key': GOOGLE_MAPS_KEY
+        const dayOrders = await prisma.order.findMany({ where: { delivery_date: date } });
+        const byId = new Map(dayOrders.map(o => [String(o.id), o]));
+        const chosen = [];
+        for (const id of ids) {
+            const o = byId.get(id);
+            if (!o) return res.status(400).json({ success: false, message: `El pedido ${id} no es de la fecha ${date}.` });
+            if (INACTIVE_STATUSES.includes(o.status)) {
+                return res.status(400).json({ success: false, message: `El pedido ${id} está ${o.status} y no puede entrar en una ruta.` });
             }
+            chosen.push(o);
+        }
+
+        const addresses = [originAddress, ...chosen.map(o => `${o.delivery_address}, ${o.delivery_zip} ${o.delivery_city}, España`)];
+        const { durations, distances } = await computeMatrix(addresses);
+        const margin = Math.min(60, Math.max(0, parseInt(marginMinutes, 10) || 0));
+        const plan = planRoute({
+            stops: chosen.map(o => ({ id: String(o.id), timeSlot: o.delivery_timeSlot })),
+            durations, distances, serviceMin: margin
         });
 
-        const data = response.data;
-
-        // Transform Google response back to our Frontend format
-        const routes = data.routes.map((route, i) => {
-            const routeOrders = (route.visits || []).map(visit => {
-                const orderIndex = parseInt(visit.shipmentLabel.split('_')[1]);
-                return orders[orderIndex];
-            });
-
-            const totalTimeSec = parseInt(route.metrics.travelDuration.replace('s', ''));
-            const totalDistMeters = route.metrics.travelDistanceMeters;
-
-            return {
-                driverId: i + 1,
-                orders: routeOrders,
-                totalTime: totalTimeSec,
-                totalDistance: totalDistMeters,
-                probabilityOfSuccess: calculateProbability(totalTimeSec, routeOrders.length)
-            };
-        });
-
+        const info = new Map(chosen.map(o => [String(o.id), o]));
         res.json({
             success: true,
-            routes,
-            totalTime: routes.reduce((sum, r) => sum + r.totalTime, 0),
-            totalDistance: routes.reduce((sum, r) => sum + r.totalDistance, 0)
+            origin: originAddress,
+            ...plan,
+            stops: plan.stops.map(s => {
+                const o = info.get(s.id);
+                return {
+                    ...s,
+                    customer_name: o.customer_name,
+                    customer_phone: o.customer_phone,
+                    address: `${o.delivery_address}, ${o.delivery_city} (${o.delivery_zip})`,
+                    addressExtra: o.delivery_addressExtra || null,
+                    status: o.status
+                };
+            })
         });
-
     } catch (error) {
-        console.error("Route Optimization Error:", error.response?.data || error.message);
-        res.status(500).json({ success: false, message: "Error en la optimización de flota." });
+        console.error('Error calculando la ruta de reparto:', error.response?.data || error.message);
+        if (error.code === 'no_route') {
+            return res.status(422).json({ success: false, message: error.message });
+        }
+        res.status(502).json({ success: false, message: 'Google Maps no ha podido calcular la ruta. Inténtalo de nuevo.' });
     }
 });
-
-function calculateProbability(time, orderCount) {
-    if (orderCount === 0) return 100;
-    const avg = time / orderCount;
-    if (avg < 900) return 98; // < 15min per stop
-    if (avg < 1800) return 85;
-    return 60;
-}
-
-function simulateOptimization(orders, drivers, margin) {
-    return {
-        routes: Array.from({ length: drivers }, (_, i) => ({
-            driverId: i + 1,
-            orders: orders.slice(i * Math.ceil(orders.length / drivers), (i + 1) * Math.ceil(orders.length / drivers)),
-            totalTime: 4000 + Math.random() * 5000,
-            totalDistance: 20000 + Math.random() * 10000,
-            probabilityOfSuccess: 90
-        }))
-    };
-}
 
 module.exports = router;

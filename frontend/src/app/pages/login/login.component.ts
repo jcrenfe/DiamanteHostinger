@@ -21,7 +21,7 @@ import { ToastService } from '../../services/toast.service';
         <div class="login-header">
            <div class="logo-container">
              <div class="logo-inner">
-               <img src="assets/images/logo.png" alt="Logo" class="login-logo">
+               <img src="assets/images/logo.webp" alt="Logo" class="login-logo">
                <div class="logo-mask"></div>
              </div>
            </div>

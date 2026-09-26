@@ -1,5 +1,7 @@
 const express = require('express');
-const prisma = require('../config/prisma');
+const { prisma, withLock } = require('../config/prisma');
+const { handleDbError } = require('../utils/dbErrors');
+const { isValidPaymentToken } = require('../services/paymentLink');
 const { verifyToken, isAdmin, optionalUser } = require('../middleware/auth');
 const router = express.Router();
 
@@ -15,7 +17,9 @@ const inRange = (o, { date, start, end }) => {
 // La usa el checkout para no ofrecer horas ya reservadas, también a clientes sin sesión.
 router.get('/occupancy', async (req, res) => {
     try {
-        const orders = await prisma.order.findMany({});
+        const orders = await prisma.order.findMany({
+            select: { delivery_date: true, delivery_timeSlot: true, delivery_proximity: true, status: true, stripeSessionId: true, createdAt: true, updatedAt: true }
+        });
         res.json(orders
             .filter(o => isActiveBooking(o) && o.delivery_date && o.delivery_timeSlot && inRange(o, req.query))
             .map(o => ({ date: o.delivery_date, timeSlot: o.delivery_timeSlot, proximity: o.delivery_proximity || null })));
@@ -30,19 +34,18 @@ router.get('/', verifyToken, async (req, res) => {
     try {
         const wantsMine = req.query.mine === '1' || req.query.mine === 'true';
         const seeAll = req.user.role === 'admin' && !wantsMine;
+        // Sin uid no hay pedidos propios que mostrar (y un filtro vacío devolvería los de todos)
+        if (!seeAll && !req.user.uid) return res.json([]);
         const where = seeAll ? {} : { customer_uid: req.user.uid };
 
-        const orders = (await prisma.order.findMany({
+        const orders = await prisma.order.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        })).filter(o => inRange(o, req.query));
-
-        const allItems = await prisma.orderItem.findMany({});
-        const byOrder = {};
-        allItems.forEach(it => { (byOrder[it.orderId] = byOrder[it.orderId] || []).push(it); });
-        res.json(orders.map(o => ({ ...o, items: byOrder[o.id] || [] })));
+            orderBy: { createdAt: 'desc' },
+            include: { items: { orderBy: { id: 'asc' } } }
+        });
+        res.json(orders.filter(o => inRange(o, req.query)));
     } catch (e) {
-        res.status(500).json({ error: 'Error al obtener pedidos' });
+        handleDbError(res, e, { fallback: 'Error al obtener pedidos' });
     }
 });
 
@@ -50,11 +53,42 @@ router.get('/', verifyToken, async (req, res) => {
 // La usa el checkout, también para clientes sin sesión, para saber si el pago se ha completado o cancelado.
 router.get('/:id/status', async (req, res) => {
     try {
-        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        const order = await prisma.order.findUnique({ where: { id: req.params.id }, select: { status: true } });
         if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
         res.json({ status: order.status });
     } catch (e) {
-        res.status(500).json({ error: 'Error al obtener el estado del pedido' });
+        handleDbError(res, e, { fallback: 'Error al obtener el estado del pedido' });
+    }
+});
+
+// GET /api/orders/:id/payment?t=firma - Datos de un pedido pendiente para pagarlo desde el enlace del correo.
+// Sin sesión, pero exige la firma del enlace; solo devuelve lo necesario para revisar el pedido antes de pagar.
+router.get('/:id/payment', async (req, res) => {
+    try {
+        if (!isValidPaymentToken(req.params.id, req.query.t)) {
+            return res.status(403).json({ error: 'El enlace de pago no es válido.' });
+        }
+        const order = await prisma.order.findUnique({
+            where: { id: req.params.id },
+            include: { items: { orderBy: { id: 'asc' }, select: { name: true, price: true, quantity: true } } }
+        });
+        if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+        if (['paid', 'delivered'].includes(order.status)) return res.json({ id: order.id, status: 'paid' });
+        if (!['pending', 'failed'].includes(order.status)) return res.json({ id: order.id, status: 'closed' });
+        res.json({
+            id: order.id,
+            status: 'payable',
+            total: order.total,
+            surchargeAmount: order.delivery_surchargeAmount || 0,
+            items: order.items,
+            customer: { name: order.customer_name, email: order.customer_email, phone: order.customer_phone },
+            delivery: {
+                address: order.delivery_address, city: order.delivery_city, zip: order.delivery_zip,
+                addressExtra: order.delivery_addressExtra, date: order.delivery_date, timeSlot: order.delivery_timeSlot
+            }
+        });
+    } catch (e) {
+        handleDbError(res, e, { fallback: 'Error al obtener el pedido' });
     }
 });
 
@@ -62,9 +96,10 @@ router.get('/:id/status', async (req, res) => {
 router.get('/:id', verifyToken, async (req, res) => {
     try {
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id }
+            where: { id: req.params.id },
+            include: { items: { orderBy: { id: 'asc' } } }
         });
-        
+
         if (!order) {
             return res.status(404).json({ error: 'Pedido no encontrado' });
         }
@@ -73,14 +108,12 @@ router.get('/:id', verifyToken, async (req, res) => {
             return res.status(403).json({ error: 'Acceso denegado' });
         }
         
-        const items = (await prisma.orderItem.findMany({ where: { orderId: order.id } }));
-        res.json({ ...order, items });
+        res.json(order);
     } catch (e) {
-        res.status(500).json({ error: 'Error al obtener el pedido' });
+        handleDbError(res, e, { fallback: 'Error al obtener el pedido' });
     }
 });
 
-const { sendOrderConfirmationEmail } = require('../services/emailService');
 const { checkDeliveryDistance } = require('../services/deliveryDistance');
 const { validateSlot, isActiveBooking } = require('../services/availability');
 
@@ -130,54 +163,53 @@ router.post('/', async (req, res) => {
         // Validar la hora y crear el pedido de forma atómica: el bloqueo por fecha serializa a los
         // clientes que reservan el mismo día, así dos pedidos no pueden coger la misma hora.
         const slotDate = data.delivery?.date;
-        const result = await prisma.$withLock(`slot:${slotDate}`, 10, async () => {
-            const configDoc = await prisma.configuration.findUnique({ where: { id: 'disponibilidad' } });
-            const existing = await prisma.order.findMany({});
+        // El pedido y sus líneas se guardan en la misma transacción: o se guarda todo o nada.
+        const lines = (Array.isArray(data.items) ? data.items : []).map(it => ({
+            productId: it.product?.id ?? it.productId ?? null,
+            name: String(it.product?.name ?? it.name ?? 'Producto').slice(0, 190),
+            price: Number(it.product?.price ?? it.price) || 0,
+            quantity: parseInt(it.quantity, 10) || 1
+        }));
+        const text = (v) => (v === undefined || v === null ? v : String(v));
+        const result = await withLock(`slot:${slotDate}`, async (tx) => {
+            const configDoc = await tx.configuration.findUnique({ where: { id: 'disponibilidad' } });
+            // validateSlot solo tiene en cuenta los pedidos del mismo día
+            const existing = await tx.order.findMany({ where: { delivery_date: String(slotDate ?? '') } });
             const slotError = validateSlot({
                 config: configDoc?.value,
-                orders: existing.filter(o => !data.id || o.id !== data.id),
+                orders: existing.filter(o => !data.id || o.id !== String(data.id)),
                 dateStr: slotDate,
                 timeSlot: data.delivery?.timeSlot
             });
             if (slotError) return { slotError };
 
             // Crear pedido en la base de datos
-            const created = await prisma.order.create({
+            const created = await tx.order.create({
                 data: {
-                    id: data.id,
+                    ...(data.id ? { id: String(data.id) } : {}),
                     customer_uid: optionalUser(req)?.uid ?? null,
-                    customer_name: data.customer?.name,
-                    customer_email: data.customer?.email,
-                    customer_phone: data.customer?.phone,
+                    customer_name: text(data.customer?.name),
+                    customer_email: text(data.customer?.email),
+                    customer_phone: text(data.customer?.phone),
                     delivery_address: deliveryAddress,
                     delivery_city: deliveryCity,
                     delivery_zip: deliveryZip,
                     delivery_addressOriginal: originalAddress,
                     delivery_addressExtra: String(data.delivery?.addressExtra || '').trim().slice(0, 190) || null,
-                    delivery_date: data.delivery?.date,
-                    delivery_timeSlot: data.delivery?.timeSlot,
-                    delivery_message: data.delivery?.message,
+                    delivery_date: text(data.delivery?.date),
+                    delivery_timeSlot: text(data.delivery?.timeSlot),
+                    delivery_message: text(data.delivery?.message),
                     delivery_distanceKm: distanceCheck.distanceKm ?? null,
                     delivery_durationMin: distanceCheck.durationMinutes ?? null,
                     delivery_proximity: distanceCheck.proximity ?? null,
                     delivery_surchargeAmount: surchargeAmount,
                     total: finalTotal,
-                    status: data.status || 'pending',
+                    // Un pedido nuevo siempre está pendiente: solo el aviso de pago de Stripe lo marca como pagado
+                    status: 'pending',
+                    // Líneas del pedido (para "Mis pedidos", el panel de administración y los correos)
+                    items: { create: lines }
                 }
             });
-            // Líneas del pedido (para "Mis pedidos", el panel de administración y los correos)
-            const lines = Array.isArray(data.items) ? data.items : [];
-            for (const it of lines) {
-                await prisma.orderItem.create({
-                    data: {
-                        orderId: created.id,
-                        productId: it.product?.id ?? it.productId ?? null,
-                        name: String(it.product?.name ?? it.name ?? 'Producto').slice(0, 190),
-                        price: Number(it.product?.price ?? it.price) || 0,
-                        quantity: parseInt(it.quantity, 10) || 1
-                    }
-                });
-            }
             return { order: created };
         });
 
@@ -186,29 +218,29 @@ router.post('/', async (req, res) => {
         }
         const order = result.order;
 
-        // Enviar correo de confirmación de forma asíncrona
-        sendOrderConfirmationEmail({ ...order, items: data.items, delivery_address_corrected: distanceCheck.addressCorrected }, order.id || data.redsysOrderId).catch(err => {
-            console.error('Error enviando email de confirmación:', err);
-        });
-
+        // El correo de confirmación se envía cuando Stripe confirma el pago (services/paymentFlow.js)
         res.json(order);
     } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Error al crear el pedido' });
+        handleDbError(res, e, { conflict: 'Ya existe un pedido con ese número', fallback: 'Error al crear el pedido' });
     }
 });
+
+const ORDER_STATUSES = ['pending', 'paid', 'delivered', 'cancelled', 'failed', 'refunded', 'paid_conflict'];
 
 // PUT /api/orders/:id/status - Actualizar estado del pedido (admin)
 router.put('/:id/status', verifyToken, isAdmin, async (req, res) => {
     try {
-        const { status } = req.body;
+        const { status } = req.body || {};
+        if (!ORDER_STATUSES.includes(status)) {
+            return res.status(400).json({ error: `Estado no válido. Valores posibles: ${ORDER_STATUSES.join(', ')}` });
+        }
         const order = await prisma.order.update({
             where: { id: req.params.id },
             data: { status }
         });
         res.json(order);
     } catch (e) {
-        res.status(500).json({ error: 'Error al actualizar el estado' });
+        handleDbError(res, e, { notFound: 'Pedido no encontrado', fallback: 'Error al actualizar el estado' });
     }
 });
 

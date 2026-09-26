@@ -17,19 +17,24 @@ import { ImageUrlPipe } from '../../pipes/image-url.pipe';
            [style.backgroundSize]="offer.backgroundImage ? 'cover' : null"
            [style.backgroundPosition]="offer.backgroundImage ? 'center' : null">
         <div class="banner-content">
-          <div class="offer-badge" *ngIf="offer.type === 'coupon'">CUPÓN DISPONIBLE</div>
+          <div class="offer-badge" *ngIf="offer.type === 'coupon'" [style.color]="offer.badgeColor || null" [style.borderColor]="offer.badgeColor || null">CUPÓN DISPONIBLE</div>
           
-          <h2 class="title-font">{{ offer.title }}</h2>
-          <p>{{ offer.description }}</p>
+          <h2 class="title-font" [style.color]="offer.titleColor || null">{{ offer.title }}</h2>
+          <p [style.color]="offer.descriptionColor || null">{{ offer.description }}</p>
           
-          <div class="code-box" *ngIf="offer.code" (click)="copyCode(offer.code)">
+          <div class="code-box" *ngIf="offer.code" (click)="copyCode(offer.code)" [style.color]="offer.codeColor || null" [style.borderColor]="offer.codeColor || null">
              <span>Usa el código:</span>
              <strong>{{ offer.code }}</strong>
              <small class="copy-hint" *ngIf="!copied">Haga clic para copiar</small>
              <small class="copy-hint" *ngIf="copied">¡Copiado!</small>
           </div>
         </div>
-        <div class="offer-amount" *ngIf="offer.discountPercent">
+        <div class="offer-amount" *ngIf="offer.discountPercent && !offer.discountCorner">
+           -{{ offer.discountPercent }}%
+        </div>
+        <div class="discount-corner" *ngIf="offer.discountPercent && offer.discountCorner"
+             [style.backgroundColor]="offer.discountBgColor || '#e67e22'"
+             [style.color]="offer.discountColor || '#ffffff'">
            -{{ offer.discountPercent }}%
         </div>
       </div>
@@ -109,6 +114,11 @@ import { ImageUrlPipe } from '../../pipes/image-url.pipe';
       padding: 1rem 2rem; border-radius: 16px; transform: rotate(-5deg);
     }
     
+    .discount-corner {
+      position: absolute; top: 14px; right: 14px; z-index: 5;
+      padding: 0.5rem 1rem; font-weight: 800; font-size: 1.1rem; border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); transform: rotate(5deg); border: 2px solid white;
+    }
     .product-deal-wrapper {
         position: relative;
         margin: 0;

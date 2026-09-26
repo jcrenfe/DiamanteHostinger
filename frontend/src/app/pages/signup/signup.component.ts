@@ -15,7 +15,7 @@ import { AuthStore } from '../../store/auth.store';
         <div class="auth-header">
            <div class="logo-container">
              <div class="logo-inner">
-               <img src="assets/images/logo.png" alt="Logo" class="auth-logo">
+               <img src="assets/images/logo.webp" alt="Logo" class="auth-logo">
                <div class="logo-mask"></div>
              </div>
            </div>

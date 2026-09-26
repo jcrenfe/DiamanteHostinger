@@ -21,6 +21,7 @@ import { ProductDetailComponent } from './pages/productos/product-detail.compone
 import { CheckoutComponent } from './pages/checkout/checkout.component';
 import { CheckoutSuccessComponent } from './pages/checkout/result/success.component';
 import { CheckoutFailComponent } from './pages/checkout/result/fail.component';
+import { PayOrderComponent } from './pages/checkout/pay-order.component';
 import { MyOrdersComponent } from './pages/mis-pedidos/my-orders.component';
 
 // Admin Pages
@@ -44,6 +45,8 @@ export const routes: Routes = [
     { path: 'checkout', component: CheckoutComponent },
     { path: 'checkout/success', component: CheckoutSuccessComponent },
     { path: 'checkout/fail', component: CheckoutFailComponent },
+    // Pagar un pedido pendiente desde el enlace del correo
+    { path: 'pagar/:id', component: PayOrderComponent },
     { path: 'mis-pedidos', component: MyOrdersComponent, canActivate: [authGuard] },
 
     // Admin Panel (Grouped)

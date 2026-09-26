@@ -17,7 +17,7 @@ import { CommonModule } from '@angular/common';
         <a routerLink="/" class="logo-group">
           <div class="logo-wrapper">
             <div class="logo-inner">
-               <img src="assets/images/logo.png" alt="Desayuno con Diamante" class="header-logo" loading="eager">
+               <img src="assets/images/logo.webp" alt="Desayuno con Diamante" class="header-logo" loading="eager">
                <div class="logo-overlay-mask"></div>
             </div>
           </div>

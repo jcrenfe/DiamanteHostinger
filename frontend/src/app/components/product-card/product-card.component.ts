@@ -153,7 +153,7 @@ export class ProductCardComponent implements AfterViewInit, OnDestroy {
   }
 
   onImgError(event: any) {
-    event.target.src = 'assets/images/placeholder.jpg';
+    event.target.src = 'assets/images/placeholder.webp';
   }
 
   getPriceDisplay(): string {

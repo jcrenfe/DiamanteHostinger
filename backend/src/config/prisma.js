@@ -1,202 +1,49 @@
-const mysql = require('mysql2/promise');
+// Acceso a la base de datos: cliente de Prisma 7 con el adaptador MariaDB, que sirve tanto para el
+// MySQL local como para el MariaDB de producción. Toda la aplicación usa este único cliente.
+const { PrismaClient, Prisma } = require('@prisma/client');
+const { PrismaMariaDb } = require('@prisma/adapter-mariadb');
 
-let pool;
-function getPool() {
-    if (!pool) {
-        pool = mysql.createPool(process.env.DATABASE_URL || 'mysql://localhost:3306/test');
-    }
-    return pool;
-}
-
-// Tablas que tienen columna createdAt/updatedAt sin DEFAULT en MySQL para updatedAt,
-// por lo que el propio wrapper debe rellenarlas (Prisma real lo hace vía @default(now())/@updatedAt).
-const TIMESTAMP_COLUMNS = {
-    Product: { createdAt: true, updatedAt: true },
-    Campaign: { createdAt: true, updatedAt: true },
-    Offer: { createdAt: true, updatedAt: true },
-    Order: { createdAt: true, updatedAt: true },
-    User: { createdAt: true, updatedAt: true },
-    Category: { createdAt: true, updatedAt: false },
-};
-
-function parseJsonFields(row) {
-    if (!row) return row;
-    const res = { ...row };
-    if ('showOnHome' in res) res.showOnHome = Boolean(res.showOnHome);
-    if ('active' in res) res.active = Boolean(res.active);
-    if ('isDefault' in res) res.isDefault = Boolean(res.isDefault);
-    if ('value' in res && typeof res.value === 'string') {
-        try { res.value = JSON.parse(res.value); } catch(e){}
-    }
-    return res;
-}
-
-function createModelHandler(tableName) {
+/** Opciones de conexión del adaptador a partir de una URL mysql://usuario:clave@host:puerto/base */
+function connectionOptions(databaseUrl, extra = {}) {
+    if (!databaseUrl) throw new Error('Falta la variable de entorno DATABASE_URL.');
+    const u = new URL(databaseUrl);
     return {
-        async findMany(args = {}) {
-            let sql = `SELECT * FROM \`${tableName}\``;
-            const params = [];
-            const whereClauses = [];
-
-            if (args.where) {
-                for (const [key, val] of Object.entries(args.where)) {
-                    if (val !== undefined && val !== null) {
-                        if (typeof val === 'boolean') {
-                            whereClauses.push(`\`${key}\` = ?`);
-                            params.push(val ? 1 : 0);
-                        } else {
-                            whereClauses.push(`\`${key}\` = ?`);
-                            params.push(val);
-                        }
-                    }
-                }
-            }
-
-            if (whereClauses.length > 0) {
-                sql += ' WHERE ' + whereClauses.join(' AND ');
-            }
-
-            if (args.orderBy) {
-                const orderEntries = Object.entries(args.orderBy);
-                if (orderEntries.length > 0) {
-                    sql += ` ORDER BY \`${orderEntries[0][0]}\` ${orderEntries[0][1].toUpperCase()}`;
-                }
-            }
-
-            if (args.take) {
-                sql += ` LIMIT ${parseInt(args.take)}`;
-            }
-
-            const [rows] = await getPool().query(sql, params);
-            return rows.map(parseJsonFields);
-        },
-
-        async findUnique(args = {}) {
-            if (!args.where) return null;
-            const key = Object.keys(args.where)[0];
-            const val = args.where[key];
-            const sql = `SELECT * FROM \`${tableName}\` WHERE \`${key}\` = ? LIMIT 1`;
-            const [rows] = await getPool().query(sql, [val]);
-            return rows.length > 0 ? parseJsonFields(rows[0]) : null;
-        },
-
-        async findFirst(args = {}) {
-            const list = await this.findMany({ ...args, take: 1 });
-            return list.length > 0 ? list[0] : null;
-        },
-
-        async create(args = {}) {
-            const data = { ...(args.data || {}) };
-            const ts = TIMESTAMP_COLUMNS[tableName];
-            if (ts) {
-                // createdAt/updatedAt están gestionados por el wrapper (como haría Prisma real),
-                // así que se ignora cualquier valor que llegue del cliente (p.ej. una copia de un
-                // registro existente reenviada con sus timestamps en formato ISO, que MySQL rechaza).
-                const now = new Date();
-                if (ts.createdAt) data.createdAt = now;
-                if (ts.updatedAt) data.updatedAt = now;
-            }
-            const keys = Object.keys(data);
-            const cols = keys.map(k => `\`${k}\``).join(', ');
-            const placeholders = keys.map(() => '?').join(', ');
-            const values = keys.map(k => {
-                const v = data[k];
-                if (typeof v === 'boolean') return v ? 1 : 0;
-                if (typeof v === 'object' && v !== null && !(v instanceof Date)) return JSON.stringify(v);
-                return v;
-            });
-
-            const sql = `INSERT INTO \`${tableName}\` (${cols}) VALUES (${placeholders})`;
-            const [result] = await getPool().query(sql, values);
-
-            if (data.id) {
-                return this.findUnique({ where: { id: data.id } });
-            } else if (result.insertId) {
-                return this.findUnique({ where: { id: result.insertId } });
-            }
-            return data;
-        },
-
-        async update(args = {}) {
-            const { where } = args;
-            const data = { ...(args.data || {}) };
-            if (!where || !args.data) return null;
-            const ts = TIMESTAMP_COLUMNS[tableName];
-            if (ts) {
-                // createdAt es inmutable y updatedAt se recalcula siempre, ignorando lo que
-                // el cliente reenvíe (p.ej. el propio registro con timestamps ISO que MySQL rechaza).
-                if (ts.createdAt) delete data.createdAt;
-                if (ts.updatedAt) data.updatedAt = new Date();
-            }
-            const whereKey = Object.keys(where)[0];
-            const whereVal = where[whereKey];
-
-            const setClauses = [];
-            const values = [];
-
-            for (const [key, val] of Object.entries(data)) {
-                setClauses.push(`\`${key}\` = ?`);
-                if (typeof val === 'boolean') values.push(val ? 1 : 0);
-                else if (typeof val === 'object' && val !== null && !(val instanceof Date)) values.push(JSON.stringify(val));
-                else values.push(val);
-            }
-            values.push(whereVal);
-
-            const sql = `UPDATE \`${tableName}\` SET ${setClauses.join(', ')} WHERE \`${whereKey}\` = ?`;
-            await getPool().query(sql, values);
-            return this.findUnique({ where });
-        },
-
-        async upsert(args = {}) {
-            const { where, update: updateData, create: createData } = args;
-            const existing = await this.findUnique({ where });
-            if (existing) {
-                return this.update({ where, data: updateData });
-            } else {
-                return this.create({ data: createData });
-            }
-        },
-
-        async delete(args = {}) {
-            if (!args.where) return null;
-            const key = Object.keys(args.where)[0];
-            const val = args.where[key];
-            const sql = `DELETE FROM \`${tableName}\` WHERE \`${key}\` = ?`;
-            await getPool().query(sql, [val]);
-            return { success: true };
-        }
+        host: u.hostname,
+        port: Number(u.port || 3306),
+        user: decodeURIComponent(u.username),
+        password: decodeURIComponent(u.password),
+        database: u.pathname.slice(1),
+        connectionLimit: Number(process.env.DB_POOL_SIZE || 5),
+        // MySQL 8 (local) autentica con caching_sha2_password y necesita la clave pública del servidor.
+        allowPublicKeyRetrieval: true,
+        ...extra
     };
 }
 
-const db = {
-    product: createModelHandler('Product'),
-    category: createModelHandler('Category'),
-    offer: createModelHandler('Offer'),
-    order: createModelHandler('Order'),
-    orderItem: createModelHandler('OrderItem'),
-    user: createModelHandler('User'),
-    campaign: createModelHandler('Campaign'),
-    configuration: createModelHandler('Configuration'),
-    // Exclusión mutua entre instancias mediante GET_LOCK de MySQL (el bloqueo vive en su conexión dedicada).
-    $withLock: async (name, timeoutSec, fn) => {
-        const conn = await getPool().getConnection();
-        try {
-            const [[row]] = await conn.query('SELECT GET_LOCK(?, ?) AS ok', [name, timeoutSec]);
-            if (row.ok !== 1) throw new Error(`No se pudo obtener el bloqueo ${name}`);
-            try {
-                return await fn();
-            } finally {
-                await conn.query('SELECT RELEASE_LOCK(?)', [name]);
-            }
-        } finally {
-            conn.release();
-        }
-    },
-    $queryRaw: async (query, ...params) => {
-        const [rows] = await getPool().query(query, params);
-        return rows;
-    }
-};
+const prisma = new PrismaClient({ adapter: new PrismaMariaDb(connectionOptions(process.env.DATABASE_URL)) });
 
-module.exports = db;
+/**
+ * Ejecuta fn(tx) dentro de una transacción que tiene en exclusiva el bloqueo `name` (p. ej. "slot:2026-10-03").
+ * Sirve para que dos clientes no reserven a la vez horas que se solapan, también entre varias instancias
+ * del servidor. El bloqueo es la fila `name` de la tabla SlotLock: INSERT ... ON DUPLICATE KEY UPDATE la
+ * bloquea en exclusiva (la crea si no existe) y la base de datos la libera sola al terminar la transacción,
+ * tanto si se confirma como si falla. Todas las consultas de la sección crítica deben hacerse con `tx`.
+ */
+async function withLock(name, fn, { timeoutMs = 20000 } = {}) {
+    return prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`INSERT INTO \`SlotLock\` (\`name\`) VALUES (${name}) ON DUPLICATE KEY UPDATE \`name\` = \`name\``;
+        return fn(tx);
+    }, {
+        // Read Committed: tras obtener el bloqueo, cada lectura ve lo que confirmó quien lo tenía antes.
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        maxWait: 10000,
+        timeout: timeoutMs
+    });
+}
 
+/** Error de Prisma "registro no encontrado" (update/delete sobre un id que no existe). */
+const isNotFound = (e) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025';
+/** Error de Prisma "valor único repetido" (p. ej. un email ya registrado). */
+const isUniqueViolation = (e) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+
+module.exports = { prisma, Prisma, withLock, isNotFound, isUniqueViolation, connectionOptions };

@@ -551,7 +551,7 @@ export class ProductManagerComponent implements OnInit {
   }
 
   getImageUrl(path?: string): string {
-    if (!path) return 'assets/images/placeholder.jpg';
+    if (!path) return 'assets/images/placeholder.webp';
     if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
     }
@@ -717,6 +717,6 @@ export class ProductManagerComponent implements OnInit {
   }
 
   onImgError(event: any) {
-    event.target.src = 'assets/images/placeholder.jpg';
+    event.target.src = 'assets/images/placeholder.webp';
   }
 }

@@ -46,7 +46,7 @@ import { OfferBannerComponent } from '../../components/offer-banner/offer-banner
           <div *ngIf="activeOffers().length === 0" class="empty-state-card fade-in">
             <div class="empty-content">
               <div class="image-container">
-                <img src="/assets/images/desayuno_con_diamantes.png" alt="Próximas ofertas" class="empty-image">
+                <img src="/assets/images/desayuno_con_diamantes.webp" alt="Próximas ofertas" class="empty-image">
                 <div class="image-overlay"></div>
               </div>
               <div class="text-container">
@@ -69,7 +69,7 @@ import { OfferBannerComponent } from '../../components/offer-banner/offer-banner
     }
     .page-header {
       background: linear-gradient(rgba(139, 69, 19, 0.4), rgba(230, 126, 34, 0.2)), 
-                  url('/assets/images/desayuno_con_diamantes.png');
+                  url('/assets/images/desayuno_con_diamantes.webp');
       background-size: cover;
       background-position: center;
       padding: 6rem 0;

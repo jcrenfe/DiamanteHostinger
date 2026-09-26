@@ -10,7 +10,7 @@ import { HeaderComponent } from '../../components/header/header.component';
     <main class="container section-padding fade-in">
        <h1 class="page-title title-font">Política de Cookies</h1>
        <div class="legal-image-wrap">
-          <img src="assets/images/politica-cookies.png" alt="Política de Cookies">
+          <img src="assets/images/politica-cookies.webp" alt="Política de Cookies">
        </div>
        <div class="legal-text">
           <section>

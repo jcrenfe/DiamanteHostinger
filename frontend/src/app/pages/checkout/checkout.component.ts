@@ -13,7 +13,7 @@ import { ConfirmDialogService } from '../../services/confirm-dialog.service';
 import { loadStripe } from '@stripe/stripe-js';
 import { environment } from '../../../environments/environment';
 
-const STRIPE_PK = 'pk_test_51Tt8ruLfaSGxxAzCguSeOSjXZ6OiV9k5A8Uwa1dLc3uVO9PW9EeFBfX6MjgwfVFjnzioEPTDNdapGQaDYO3cC7Mz008EtsfQRx';
+const STRIPE_PK = environment.stripePublishableKey;
 
 @Component({
   selector: 'app-checkout',
@@ -439,7 +439,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
           await this.confirmDialog.open({
             title: '🔴 Pedido Cancelado',
-            message: 'Has alcanzado el número máximo de intentos fallidos de pago para este pedido (o el tiempo límite ha expirado). El pedido ha sido cancelado y la hora reservada liberada.',
+            message: 'Este pedido ha sido cancelado y la hora reservada se ha liberado. Si quieres, puedes hacer un pedido nuevo.',
             confirmText: 'Entendido',
             cancelText: '',
             type: 'danger'
@@ -722,10 +722,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         this.orderId.set(orderIdToPay);
         this.listenToOrderStatus(docIdToListen);
 
-        // Usamos el total autoritativo devuelto por el servidor (incluye el incremento por
-        // desplazamiento calculado en servidor), no el subtotal local sin incremento.
-        const amountToCharge = result.total ?? orderData.total;
-        const paymentParams: any = await this.orderService.initPayment(amountToCharge, orderIdToPay);
+        // El servidor cobra el total guardado en el pedido (incluye el incremento por desplazamiento)
+        const paymentParams: any = await this.orderService.initPayment(orderIdToPay);
 
         if (paymentParams && paymentParams.clientSecret) {
           if (paymentParams.sessionId) {
@@ -746,7 +744,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
           this.checkoutForm.get('timeSlot')?.setValue('');
           if (date) this.availableSlots.set(await this.appointmentService.getAvailableSlots(date));
         } else {
-          this.toastService.error('Error al generar la pasarela de pago con Stripe.');
+          this.toastService.error(paymentParams?.message || 'No se ha podido abrir la pasarela de pago. Te hemos enviado un correo para completar el pago más tarde.');
           this.isSubmitting.set(false);
           await this.handlePaymentFailure(orderIdToPay);
         }

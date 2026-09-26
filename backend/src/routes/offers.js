@@ -1,57 +1,51 @@
 const express = require('express');
-const prisma = require('../config/prisma');
+const { prisma } = require('../config/prisma');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { pick, OFFER_FIELDS } = require('../utils/input');
+const { handleDbError } = require('../utils/dbErrors');
 const router = express.Router();
 
-// GET /api/offers - Obtener ofertas
+// GET /api/offers - Obtener ofertas (?active=true: solo las activas)
 router.get('/', async (req, res) => {
     try {
-        const { active } = req.query;
-        let where = {};
-        if (active === 'true') {
-            where.active = true;
-        }
+        const where = req.query.active === 'true' ? { active: true } : {};
         const offers = await prisma.offer.findMany({ where });
         res.json(offers);
     } catch (e) {
-        res.status(500).json({ error: 'Error al obtener ofertas' });
+        handleDbError(res, e, { fallback: 'Error al obtener ofertas' });
     }
 });
 
 // POST /api/offers - Crear oferta (Admin)
 router.post('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const data = req.body;
-        const offer = await prisma.offer.create({ data });
+        const offer = await prisma.offer.create({ data: pick(req.body, OFFER_FIELDS) });
         res.json(offer);
     } catch (e) {
-        res.status(500).json({ error: 'Error al crear oferta' });
+        handleDbError(res, e, { fallback: 'Error al crear oferta' });
     }
 });
 
 // PUT /api/offers/:id - Actualizar oferta (Admin)
 router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const data = req.body;
         const offer = await prisma.offer.update({
             where: { id: req.params.id },
-            data
+            data: pick(req.body, OFFER_FIELDS)
         });
         res.json(offer);
     } catch (e) {
-        res.status(500).json({ error: 'Error al actualizar oferta' });
+        handleDbError(res, e, { notFound: 'Oferta no encontrada', fallback: 'Error al actualizar oferta' });
     }
 });
 
 // DELETE /api/offers/:id - Eliminar oferta (Admin)
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        await prisma.offer.delete({
-            where: { id: req.params.id }
-        });
+        await prisma.offer.delete({ where: { id: req.params.id } });
         res.json({ message: 'Oferta eliminada correctamente' });
     } catch (e) {
-        res.status(500).json({ error: 'Error al eliminar oferta' });
+        handleDbError(res, e, { notFound: 'Oferta no encontrada', fallback: 'Error al eliminar oferta' });
     }
 });
 

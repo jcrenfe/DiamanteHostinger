@@ -24,7 +24,7 @@ describe('ImageUrlPipe', () => {
   });
   it('respeta URLs absolutas y rutas de assets, y usa el placeholder sin ruta', () => {
     expect(pipe.transform('https://x.com/a.png')).toBe('https://x.com/a.png');
-    expect(pipe.transform('assets/images/logo.png')).toBe('assets/images/logo.png');
-    expect(pipe.transform(undefined)).toBe('assets/images/placeholder.jpg');
+    expect(pipe.transform('assets/images/logo.webp')).toBe('assets/images/logo.webp');
+    expect(pipe.transform(undefined)).toBe('assets/images/placeholder.webp');
   });
 });

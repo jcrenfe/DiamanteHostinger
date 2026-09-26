@@ -1,6 +1,8 @@
 const express = require('express');
-const prisma = require('../config/prisma');
+const { prisma } = require('../config/prisma');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+const { pick, CATEGORY_FIELDS } = require('../utils/input');
+const { handleDbError } = require('../utils/dbErrors');
 const router = express.Router();
 
 // GET /api/categories - Obtener categorías
@@ -9,45 +11,42 @@ router.get('/', async (req, res) => {
         const categories = await prisma.category.findMany();
         res.json(categories);
     } catch (e) {
-        res.status(500).json({ error: 'Error al obtener categorías' });
+        handleDbError(res, e, { fallback: 'Error al obtener categorías' });
     }
 });
 
-// POST /api/categories - Crear categoría (Admin)
+// POST /api/categories - Crear categoría (Admin). El id lo propone el panel; si no llega, se genera.
 router.post('/', verifyToken, isAdmin, async (req, res) => {
     try {
-        const data = req.body;
+        const data = pick(req.body, CATEGORY_FIELDS);
+        if (typeof req.body?.id === 'string' && req.body.id) data.id = req.body.id;
         const category = await prisma.category.create({ data });
         res.json(category);
     } catch (e) {
-        console.error('Error in POST /categories:', e);
-        res.status(500).json({ error: 'Error al crear categoría' });
+        handleDbError(res, e, { conflict: 'Ya existe una categoría con ese identificador', fallback: 'Error al crear categoría' });
     }
 });
 
 // PUT /api/categories/:id - Actualizar categoría (Admin)
 router.put('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        const data = req.body;
         const category = await prisma.category.update({
             where: { id: req.params.id },
-            data
+            data: pick(req.body, CATEGORY_FIELDS)
         });
         res.json(category);
     } catch (e) {
-        res.status(500).json({ error: 'Error al actualizar categoría' });
+        handleDbError(res, e, { notFound: 'Categoría no encontrada', fallback: 'Error al actualizar categoría' });
     }
 });
 
 // DELETE /api/categories/:id - Eliminar categoría (Admin)
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     try {
-        await prisma.category.delete({
-            where: { id: req.params.id }
-        });
+        await prisma.category.delete({ where: { id: req.params.id } });
         res.json({ message: 'Categoría eliminada correctamente' });
     } catch (e) {
-        res.status(500).json({ error: 'Error al eliminar categoría' });
+        handleDbError(res, e, { notFound: 'Categoría no encontrada', fallback: 'Error al eliminar categoría' });
     }
 });
 

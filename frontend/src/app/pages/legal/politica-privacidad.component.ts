@@ -10,7 +10,7 @@ import { HeaderComponent } from '../../components/header/header.component';
     <main class="container section-padding fade-in">
        <h1 class="page-title title-font">Política de Privacidad</h1>
        <div class="legal-image-wrap">
-          <img src="assets/images/politica-privacidad.png" alt="Política de Privacidad">
+          <img src="assets/images/politica-privacidad.webp" alt="Política de Privacidad">
        </div>
        <div class="legal-text">
           <section>

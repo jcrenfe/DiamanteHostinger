@@ -1,15 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../config/prisma');
+const { prisma } = require('../config/prisma');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
-// Get the appointment configuration
+// Configuración de disponibilidad (días, franjas, reglas de bloqueo, origen y recargos)
 router.get('/appointment', async (req, res) => {
     try {
-        const configDoc = await prisma.configuration.findUnique({
-            where: { id: 'disponibilidad' }
-        });
-        
+        const configDoc = await prisma.configuration.findUnique({ where: { id: 'disponibilidad' } });
         if (configDoc && configDoc.value) {
             res.json(configDoc.value);
         } else {
@@ -21,13 +18,17 @@ router.get('/appointment', async (req, res) => {
     }
 });
 
-// Update the appointment configuration
+// Guarda la configuración de disponibilidad (Admin)
 router.post('/appointment', verifyToken, isAdmin, async (req, res) => {
+    const value = req.body;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return res.status(400).json({ error: 'Configuración no válida' });
+    }
     try {
         const updatedConfig = await prisma.configuration.upsert({
             where: { id: 'disponibilidad' },
-            update: { value: req.body },
-            create: { id: 'disponibilidad', value: req.body }
+            update: { value },
+            create: { id: 'disponibilidad', value }
         });
         res.json({ success: true, config: updatedConfig.value });
     } catch (error) {

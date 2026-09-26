@@ -130,6 +130,18 @@ export class OrderService {
     }
 
     /** Estado del pedido (endpoint público, válido también para clientes sin sesión). */
+    /** Pedido pendiente de pago al que se llega desde el enlace del correo (t = firma del enlace). */
+    async getPaymentInfo(orderId: string, token: string): Promise<{ ok: boolean; status?: number; data?: any }> {
+        try {
+            const data = await firstValueFrom(
+                this.http.get<any>(`${this.API_URL}/${encodeURIComponent(orderId)}/payment`, { params: { t: token } })
+            );
+            return { ok: true, data };
+        } catch (e: any) {
+            return { ok: false, status: e?.status };
+        }
+    }
+
     async getOrderStatus(orderId: string): Promise<string | null> {
         try {
             const res = await firstValueFrom(this.http.get<{ status: string }>(`${this.API_URL}/${orderId}/status`));
@@ -159,10 +171,11 @@ export class OrderService {
         return { success: true, status: 'paid' };
     }
 
-    async initPayment(amount: number, orderId: string): Promise<any> {
+    /** Abre la pasarela de Stripe para un pedido ya guardado; el importe lo pone el servidor a partir del pedido. */
+    async initPayment(orderId: string): Promise<any> {
         try {
             const response = await firstValueFrom(
-                this.http.post<any>(`${this.PAYMENT_URL}/create-payment`, { amount, orderId })
+                this.http.post<any>(`${this.PAYMENT_URL}/create-payment`, { orderId })
             );
             return response;
         } catch (e: any) {

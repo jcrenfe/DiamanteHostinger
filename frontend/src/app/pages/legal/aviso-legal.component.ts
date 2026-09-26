@@ -10,7 +10,7 @@ import { HeaderComponent } from '../../components/header/header.component';
     <main class="container section-padding fade-in">
        <h1 class="page-title title-font">Aviso Legal</h1>
        <div class="legal-image-wrap">
-          <img src="assets/images/aviso-legal.png" alt="Aviso Legal">
+          <img src="assets/images/aviso-legal.webp" alt="Aviso Legal">
        </div>
        <div class="legal-text">
           <section>

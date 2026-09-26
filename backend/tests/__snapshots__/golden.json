@@ -1,0 +1,1450 @@
+{
+  "responses": {
+    "login correcto": {
+      "body": {
+        "token": "<jwt>",
+        "user": {
+          "displayName": "Admin",
+          "email": "admin@x.com",
+          "role": "admin",
+          "uid": "admin1"
+        }
+      },
+      "status": 200
+    },
+    "login contraseña errónea": {
+      "body": {
+        "error": "Credenciales inválidas"
+      },
+      "status": 401
+    },
+    "login usuario inexistente": {
+      "body": {
+        "error": "Credenciales inválidas"
+      },
+      "status": 401
+    },
+    "registro nuevo": {
+      "body": {
+        "token": "<jwt>",
+        "user": {
+          "displayName": "Nuevo",
+          "email": "nuevo@x.com",
+          "role": "cliente",
+          "uid": "<uuid>"
+        }
+      },
+      "status": 200
+    },
+    "registro email repetido": {
+      "body": {
+        "error": "El email ya está registrado"
+      },
+      "status": 400
+    },
+    "productos: lista": {
+      "body": [
+        {
+          "category": "Desayunos",
+          "createdAt": "<fecha>",
+          "description": "Cesta",
+          "id": "p1",
+          "local_image_path": "/uploads/p1.webp",
+          "name": "DESAYUNO CON DIAMANTES",
+          "price": 35,
+          "showOnHome": true,
+          "tipo": null,
+          "updatedAt": "<fecha>",
+          "url_origen": null
+        },
+        {
+          "category": "Adicionales",
+          "createdAt": "<fecha>",
+          "description": null,
+          "id": "p2",
+          "local_image_path": "/uploads/p2.webp",
+          "name": "GLOBO",
+          "price": 5.5,
+          "showOnHome": false,
+          "tipo": null,
+          "updatedAt": "<fecha>",
+          "url_origen": null
+        }
+      ],
+      "status": 200
+    },
+    "productos: uno": {
+      "body": {
+        "category": "Desayunos",
+        "createdAt": "<fecha>",
+        "description": "Cesta",
+        "id": "p1",
+        "local_image_path": "/uploads/p1.webp",
+        "name": "DESAYUNO CON DIAMANTES",
+        "price": 35,
+        "showOnHome": true,
+        "tipo": null,
+        "updatedAt": "<fecha>",
+        "url_origen": null
+      },
+      "status": 200
+    },
+    "productos: inexistente": {
+      "body": {
+        "error": "Producto no encontrado"
+      },
+      "status": 404
+    },
+    "productos: crear": {
+      "body": {
+        "category": "Adicionales",
+        "createdAt": "<fecha>",
+        "description": "Naranja",
+        "id": "p3",
+        "local_image_path": null,
+        "name": "ZUMO",
+        "price": 4,
+        "showOnHome": false,
+        "tipo": null,
+        "updatedAt": "<fecha>",
+        "url_origen": null
+      },
+      "status": 200
+    },
+    "productos: crear sin sesión": {
+      "body": {
+        "error": "No autorizado. Se requiere token Bearer."
+      },
+      "status": 401
+    },
+    "productos: actualizar": {
+      "body": {
+        "category": "Adicionales",
+        "createdAt": "<fecha>",
+        "description": "Naranja",
+        "id": "p3",
+        "local_image_path": null,
+        "name": "ZUMO GRANDE",
+        "price": 4.5,
+        "showOnHome": true,
+        "tipo": null,
+        "updatedAt": "<fecha>",
+        "url_origen": null
+      },
+      "status": 200
+    },
+    "productos: actualizar inexistente": {
+      "body": {
+        "error": "Producto no encontrado"
+      },
+      "status": 404
+    },
+    "productos: borrar": {
+      "body": {
+        "message": "Producto eliminado correctamente"
+      },
+      "status": 200
+    },
+    "productos: borrar inexistente": {
+      "body": {
+        "error": "Producto no encontrado"
+      },
+      "status": 404
+    },
+    "categorías: lista": {
+      "body": [
+        {
+          "createdAt": "<fecha>",
+          "description": "Cestas",
+          "id": "cat-1",
+          "isDefault": true,
+          "name": "Desayunos",
+          "order": 1
+        },
+        {
+          "createdAt": "<fecha>",
+          "description": null,
+          "id": "cat-2",
+          "isDefault": false,
+          "name": "Adicionales",
+          "order": 2
+        }
+      ],
+      "status": 200
+    },
+    "categorías: crear": {
+      "body": {
+        "createdAt": "<fecha>",
+        "description": "Zumos",
+        "id": "cat-3",
+        "isDefault": false,
+        "name": "Bebidas",
+        "order": 3
+      },
+      "status": 200
+    },
+    "categorías: actualizar": {
+      "body": {
+        "createdAt": "<fecha>",
+        "description": "Zumos",
+        "id": "cat-3",
+        "isDefault": false,
+        "name": "Bebidas frías",
+        "order": 4
+      },
+      "status": 200
+    },
+    "categorías: borrar": {
+      "body": {
+        "message": "Categoría eliminada correctamente"
+      },
+      "status": 200
+    },
+    "ofertas: todas": {
+      "body": [
+        {
+          "active": true,
+          "backgroundColor": "#8B4513",
+          "backgroundImage": null,
+          "badgeColor": null,
+          "code": null,
+          "codeColor": null,
+          "createdAt": "<fecha>",
+          "description": "Rebajas",
+          "descriptionColor": null,
+          "discountBgColor": null,
+          "discountColor": null,
+          "discountCorner": false,
+          "discountPercent": null,
+          "id": "of-1",
+          "imageUrl": null,
+          "productId": null,
+          "ribbonColor": null,
+          "ribbonText": null,
+          "ribbonTextColor": null,
+          "title": "Banner",
+          "titleColor": null,
+          "type": "banner",
+          "updatedAt": "<fecha>",
+          "validUntil": null
+        },
+        {
+          "active": false,
+          "backgroundColor": null,
+          "backgroundImage": null,
+          "badgeColor": null,
+          "code": "DIAMANTE10",
+          "codeColor": null,
+          "createdAt": "<fecha>",
+          "description": null,
+          "descriptionColor": null,
+          "discountBgColor": null,
+          "discountColor": null,
+          "discountCorner": false,
+          "discountPercent": 10,
+          "id": "of-2",
+          "imageUrl": null,
+          "productId": null,
+          "ribbonColor": null,
+          "ribbonText": null,
+          "ribbonTextColor": null,
+          "title": "Cupón",
+          "titleColor": null,
+          "type": "coupon",
+          "updatedAt": "<fecha>",
+          "validUntil": null
+        }
+      ],
+      "status": 200
+    },
+    "ofertas: activas": {
+      "body": [
+        {
+          "active": true,
+          "backgroundColor": "#8B4513",
+          "backgroundImage": null,
+          "badgeColor": null,
+          "code": null,
+          "codeColor": null,
+          "createdAt": "<fecha>",
+          "description": "Rebajas",
+          "descriptionColor": null,
+          "discountBgColor": null,
+          "discountColor": null,
+          "discountCorner": false,
+          "discountPercent": null,
+          "id": "of-1",
+          "imageUrl": null,
+          "productId": null,
+          "ribbonColor": null,
+          "ribbonText": null,
+          "ribbonTextColor": null,
+          "title": "Banner",
+          "titleColor": null,
+          "type": "banner",
+          "updatedAt": "<fecha>",
+          "validUntil": null
+        }
+      ],
+      "status": 200
+    },
+    "ofertas: crear": {
+      "body": {
+        "active": true,
+        "backgroundColor": null,
+        "backgroundImage": null,
+        "badgeColor": null,
+        "code": null,
+        "codeColor": null,
+        "createdAt": "<fecha>",
+        "description": "Desc",
+        "descriptionColor": null,
+        "discountBgColor": null,
+        "discountColor": null,
+        "discountCorner": false,
+        "discountPercent": null,
+        "id": "<uuid>",
+        "imageUrl": null,
+        "productId": "p1",
+        "ribbonColor": "#e67e22",
+        "ribbonText": "¡Oferta!",
+        "ribbonTextColor": "#ffffff",
+        "title": "Nueva",
+        "titleColor": null,
+        "type": "product_deal",
+        "updatedAt": "<fecha>",
+        "validUntil": null
+      },
+      "status": 200
+    },
+    "ofertas: actualizar": {
+      "body": {
+        "active": true,
+        "backgroundColor": null,
+        "backgroundImage": null,
+        "badgeColor": null,
+        "code": "DIAMANTE10",
+        "codeColor": null,
+        "createdAt": "<fecha>",
+        "description": null,
+        "descriptionColor": null,
+        "discountBgColor": null,
+        "discountColor": null,
+        "discountCorner": false,
+        "discountPercent": 15,
+        "id": "of-2",
+        "imageUrl": null,
+        "productId": null,
+        "ribbonColor": null,
+        "ribbonText": null,
+        "ribbonTextColor": null,
+        "title": "Cupón 15",
+        "titleColor": null,
+        "type": "coupon",
+        "updatedAt": "<fecha>",
+        "validUntil": null
+      },
+      "status": 200
+    },
+    "ofertas: borrar": {
+      "body": {
+        "message": "Oferta eliminada correctamente"
+      },
+      "status": 200
+    },
+    "config: leer": {
+      "body": {
+        "blockingRules": {
+          "far": {
+            "afterMinutes": 90,
+            "beforeMinutes": 120
+          },
+          "medium": {
+            "afterMinutes": 60,
+            "beforeMinutes": 90
+          },
+          "near": {
+            "afterMinutes": 30,
+            "beforeMinutes": 60
+          }
+        },
+        "dailySlots": {
+          "2": [
+            {
+              "end": "13:00",
+              "start": "09:00"
+            }
+          ],
+          "3": [
+            {
+              "end": "13:00",
+              "start": "09:00"
+            }
+          ]
+        },
+        "deliveryDays": [
+          "2099-03-03",
+          "2099-03-04"
+        ],
+        "deliverySurcharges": {
+          "far": {
+            "amount": 0.5,
+            "type": "perKm"
+          },
+          "medium": {
+            "amount": 3,
+            "type": "fixed"
+          }
+        },
+        "maxDeliveryMinutes": 60,
+        "originAddress": "Calle Origen 1, Madrid",
+        "proximityThresholds": {
+          "mediumMaxMinutes": 30,
+          "nearMaxMinutes": 15
+        }
+      },
+      "status": 200
+    },
+    "config: guardar sin sesión": {
+      "body": {
+        "error": "No autorizado. Se requiere token Bearer."
+      },
+      "status": 401
+    },
+    "config: guardar": {
+      "body": {
+        "config": {
+          "blockingRules": {
+            "far": {
+              "afterMinutes": 90,
+              "beforeMinutes": 120
+            },
+            "medium": {
+              "afterMinutes": 60,
+              "beforeMinutes": 90
+            },
+            "near": {
+              "afterMinutes": 30,
+              "beforeMinutes": 60
+            }
+          },
+          "dailySlots": {
+            "2": [
+              {
+                "end": "13:00",
+                "start": "09:00"
+              }
+            ],
+            "3": [
+              {
+                "end": "13:00",
+                "start": "09:00"
+              }
+            ]
+          },
+          "deliveryDays": [
+            "2099-03-03",
+            "2099-03-04"
+          ],
+          "deliverySurcharges": {
+            "far": {
+              "amount": 0.5,
+              "type": "perKm"
+            },
+            "medium": {
+              "amount": 3,
+              "type": "fixed"
+            }
+          },
+          "maxDeliveryMinutes": 45,
+          "originAddress": "Calle Origen 1, Madrid",
+          "proximityThresholds": {
+            "mediumMaxMinutes": 30,
+            "nearMaxMinutes": 15
+          }
+        },
+        "success": true
+      },
+      "status": 200
+    },
+    "config: leer tras guardar": {
+      "body": {
+        "blockingRules": {
+          "far": {
+            "afterMinutes": 90,
+            "beforeMinutes": 120
+          },
+          "medium": {
+            "afterMinutes": 60,
+            "beforeMinutes": 90
+          },
+          "near": {
+            "afterMinutes": 30,
+            "beforeMinutes": 60
+          }
+        },
+        "dailySlots": {
+          "2": [
+            {
+              "end": "13:00",
+              "start": "09:00"
+            }
+          ],
+          "3": [
+            {
+              "end": "13:00",
+              "start": "09:00"
+            }
+          ]
+        },
+        "deliveryDays": [
+          "2099-03-03",
+          "2099-03-04"
+        ],
+        "deliverySurcharges": {
+          "far": {
+            "amount": 0.5,
+            "type": "perKm"
+          },
+          "medium": {
+            "amount": 3,
+            "type": "fixed"
+          }
+        },
+        "maxDeliveryMinutes": 45,
+        "originAddress": "Calle Origen 1, Madrid",
+        "proximityThresholds": {
+          "mediumMaxMinutes": 30,
+          "nearMaxMinutes": 15
+        }
+      },
+      "status": 200
+    },
+    "pedidos: ocupación de un día": {
+      "body": [
+        {
+          "date": "2099-03-03",
+          "proximity": "near",
+          "timeSlot": "10:00"
+        }
+      ],
+      "status": 200
+    },
+    "pedidos: ocupación de un rango": {
+      "body": [
+        {
+          "date": "2099-03-03",
+          "proximity": "near",
+          "timeSlot": "10:00"
+        },
+        {
+          "date": "2099-03-04",
+          "proximity": null,
+          "timeSlot": "11:00"
+        }
+      ],
+      "status": 200
+    },
+    "pedidos: lista sin sesión": {
+      "body": {
+        "error": "No autorizado. Se requiere token Bearer."
+      },
+      "status": 401
+    },
+    "pedidos: lista admin": {
+      "body": [
+        {
+          "createdAt": "<fecha>",
+          "customer_email": "luis@x.com",
+          "customer_name": "Luis",
+          "customer_phone": "600000000",
+          "customer_uid": "luis",
+          "delivery_address": "C/ Uno 1",
+          "delivery_addressExtra": null,
+          "delivery_addressOriginal": null,
+          "delivery_city": "Madrid",
+          "delivery_date": "2099-03-04",
+          "delivery_distanceKm": null,
+          "delivery_durationMin": null,
+          "delivery_message": null,
+          "delivery_proximity": null,
+          "delivery_surchargeAmount": null,
+          "delivery_timeSlot": "11:00",
+          "delivery_zip": "28001",
+          "failedPaymentAttempts": 0,
+          "id": "o-pend",
+          "items": [
+            {
+              "id": 2,
+              "name": "DESAYUNO CON DIAMANTES",
+              "orderId": "o-pend",
+              "price": 35,
+              "productId": "p1",
+              "quantity": 1
+            },
+            {
+              "id": 3,
+              "name": "GLOBO",
+              "orderId": "o-pend",
+              "price": 5.5,
+              "productId": "p2",
+              "quantity": 1
+            }
+          ],
+          "lastStripeErrorId": null,
+          "paymentIssueEmailAt": null,
+          "redsysOrderId": "100000000002",
+          "status": "pending",
+          "stripePaymentIntent": null,
+          "stripeSessionId": null,
+          "total": 40.5,
+          "updatedAt": "<fecha>"
+        },
+        {
+          "createdAt": "<fecha>",
+          "customer_email": "cliente@x.com",
+          "customer_name": "Invitado",
+          "customer_phone": "600000000",
+          "customer_uid": null,
+          "delivery_address": "C/ Uno 1",
+          "delivery_addressExtra": null,
+          "delivery_addressOriginal": null,
+          "delivery_city": "Madrid",
+          "delivery_date": "2099-03-03",
+          "delivery_distanceKm": null,
+          "delivery_durationMin": null,
+          "delivery_message": null,
+          "delivery_proximity": null,
+          "delivery_surchargeAmount": null,
+          "delivery_timeSlot": "12:30",
+          "delivery_zip": "28001",
+          "failedPaymentAttempts": 0,
+          "id": "o-old",
+          "items": [],
+          "lastStripeErrorId": null,
+          "paymentIssueEmailAt": null,
+          "redsysOrderId": "100000000003",
+          "status": "pending",
+          "stripePaymentIntent": null,
+          "stripeSessionId": null,
+          "total": 20,
+          "updatedAt": "<fecha>"
+        },
+        {
+          "createdAt": "<fecha>",
+          "customer_email": "cliente@x.com",
+          "customer_name": "Cliente",
+          "customer_phone": "600000000",
+          "customer_uid": "ana",
+          "delivery_address": "C/ Uno 1",
+          "delivery_addressExtra": null,
+          "delivery_addressOriginal": null,
+          "delivery_city": "Madrid",
+          "delivery_date": "2099-03-04",
+          "delivery_distanceKm": null,
+          "delivery_durationMin": null,
+          "delivery_message": null,
+          "delivery_proximity": null,
+          "delivery_surchargeAmount": null,
+          "delivery_timeSlot": "09:00",
+          "delivery_zip": "28001",
+          "failedPaymentAttempts": 0,
+          "id": "o-canc",
+          "items": [],
+          "lastStripeErrorId": null,
+          "paymentIssueEmailAt": null,
+          "redsysOrderId": "100000000004",
+          "status": "cancelled",
+          "stripePaymentIntent": null,
+          "stripeSessionId": null,
+          "total": 20,
+          "updatedAt": "<fecha>"
+        },
+        {
+          "createdAt": "<fecha>",
+          "customer_email": "ana@x.com",
+          "customer_name": "Ana",
+          "customer_phone": "600000000",
+          "customer_uid": "ana",
+          "delivery_address": "C/ Uno 1",
+          "delivery_addressExtra": null,
+          "delivery_addressOriginal": null,
+          "delivery_city": "Madrid",
+          "delivery_date": "2099-03-03",
+          "delivery_distanceKm": null,
+          "delivery_durationMin": null,
+          "delivery_message": null,
+          "delivery_proximity": "near",
+          "delivery_surchargeAmount": null,
+          "delivery_timeSlot": "10:00",
+          "delivery_zip": "28001",
+          "failedPaymentAttempts": 0,
+          "id": "o-paid",
+          "items": [
+            {
+              "id": 1,
+              "name": "DESAYUNO CON DIAMANTES",
+              "orderId": "o-paid",
+              "price": 35,
+              "productId": "p1",
+              "quantity": 1
+            }
+          ],
+          "lastStripeErrorId": null,
+          "paymentIssueEmailAt": null,
+          "redsysOrderId": "100000000001",
+          "status": "paid",
+          "stripePaymentIntent": null,
+          "stripeSessionId": null,
+          "total": 35,
+          "updatedAt": "<fecha>"
+        }
+      ],
+      "status": 200
+    },
+    "pedidos: mis pedidos (Ana)": {
+      "body": [
+        {
+          "createdAt": "<fecha>",
+          "customer_email": "cliente@x.com",
+          "customer_name": "Cliente",
+          "customer_phone": "600000000",
+          "customer_uid": "ana",
+          "delivery_address": "C/ Uno 1",
+          "delivery_addressExtra": null,
+          "delivery_addressOriginal": null,
+          "delivery_city": "Madrid",
+          "delivery_date": "2099-03-04",
+          "delivery_distanceKm": null,
+          "delivery_durationMin": null,
+          "delivery_message": null,
+          "delivery_proximity": null,
+          "delivery_surchargeAmount": null,
+          "delivery_timeSlot": "09:00",
+          "delivery_zip": "28001",
+          "failedPaymentAttempts": 0,
+          "id": "o-canc",
+          "items": [],
+          "lastStripeErrorId": null,
+          "paymentIssueEmailAt": null,
+          "redsysOrderId": "100000000004",
+          "status": "cancelled",
+          "stripePaymentIntent": null,
+          "stripeSessionId": null,
+          "total": 20,
+          "updatedAt": "<fecha>"
+        },
+        {
+          "createdAt": "<fecha>",
+          "customer_email": "ana@x.com",
+          "customer_name": "Ana",
+          "customer_phone": "600000000",
+          "customer_uid": "ana",
+          "delivery_address": "C/ Uno 1",
+          "delivery_addressExtra": null,
+          "delivery_addressOriginal": null,
+          "delivery_city": "Madrid",
+          "delivery_date": "2099-03-03",
+          "delivery_distanceKm": null,
+          "delivery_durationMin": null,
+          "delivery_message": null,
+          "delivery_proximity": "near",
+          "delivery_surchargeAmount": null,
+          "delivery_timeSlot": "10:00",
+          "delivery_zip": "28001",
+          "failedPaymentAttempts": 0,
+          "id": "o-paid",
+          "items": [
+            {
+              "id": 1,
+              "name": "DESAYUNO CON DIAMANTES",
+              "orderId": "o-paid",
+              "price": 35,
+              "productId": "p1",
+              "quantity": 1
+            }
+          ],
+          "lastStripeErrorId": null,
+          "paymentIssueEmailAt": null,
+          "redsysOrderId": "100000000001",
+          "status": "paid",
+          "stripePaymentIntent": null,
+          "stripeSessionId": null,
+          "total": 35,
+          "updatedAt": "<fecha>"
+        }
+      ],
+      "status": 200
+    },
+    "pedidos: mis pedidos (admin)": {
+      "body": [],
+      "status": 200
+    },
+    "pedidos: estado público": {
+      "body": {
+        "status": "pending"
+      },
+      "status": 200
+    },
+    "pedidos: estado inexistente": {
+      "body": {
+        "error": "Pedido no encontrado"
+      },
+      "status": 404
+    },
+    "pedidos: detalle propio": {
+      "body": {
+        "createdAt": "<fecha>",
+        "customer_email": "ana@x.com",
+        "customer_name": "Ana",
+        "customer_phone": "600000000",
+        "customer_uid": "ana",
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-03",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": "near",
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "10:00",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 0,
+        "id": "o-paid",
+        "items": [
+          {
+            "id": 1,
+            "name": "DESAYUNO CON DIAMANTES",
+            "orderId": "o-paid",
+            "price": 35,
+            "productId": "p1",
+            "quantity": 1
+          }
+        ],
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000001",
+        "status": "paid",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 35,
+        "updatedAt": "<fecha>"
+      },
+      "status": 200
+    },
+    "pedidos: detalle ajeno": {
+      "body": {
+        "error": "Acceso denegado"
+      },
+      "status": 403
+    },
+    "pedidos: detalle admin": {
+      "body": {
+        "createdAt": "<fecha>",
+        "customer_email": "luis@x.com",
+        "customer_name": "Luis",
+        "customer_phone": "600000000",
+        "customer_uid": "luis",
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-04",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": null,
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "11:00",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 0,
+        "id": "o-pend",
+        "items": [
+          {
+            "id": 2,
+            "name": "DESAYUNO CON DIAMANTES",
+            "orderId": "o-pend",
+            "price": 35,
+            "productId": "p1",
+            "quantity": 1
+          },
+          {
+            "id": 3,
+            "name": "GLOBO",
+            "orderId": "o-pend",
+            "price": 5.5,
+            "productId": "p2",
+            "quantity": 1
+          }
+        ],
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000002",
+        "status": "pending",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 40.5,
+        "updatedAt": "<fecha>"
+      },
+      "status": 200
+    },
+    "pedidos: crear": {
+      "body": {
+        "createdAt": "<fecha>",
+        "customer_email": "luis@x.com",
+        "customer_name": "Luis",
+        "customer_phone": "600111222",
+        "customer_uid": "luis",
+        "delivery_address": "C/ Dos, 7",
+        "delivery_addressExtra": "2º B",
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-03",
+        "delivery_distanceKm": 5,
+        "delivery_durationMin": 10,
+        "delivery_message": "Feliz día",
+        "delivery_proximity": "near",
+        "delivery_surchargeAmount": 0,
+        "delivery_timeSlot": "11:30",
+        "delivery_zip": "28002",
+        "failedPaymentAttempts": 0,
+        "id": "200000000001",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": null,
+        "status": "pending",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 40.5,
+        "updatedAt": "<fecha>"
+      },
+      "status": 200
+    },
+    "pedidos: crear en hora ocupada": {
+      "body": {
+        "error": "Esa hora ya no está disponible. Elige otra.",
+        "reason": "slot_unavailable"
+      },
+      "status": 409
+    },
+    "pago: iniciar": {
+      "body": {
+        "clientSecret": "secret_1",
+        "sessionId": "cs_test_1"
+      },
+      "status": 200
+    },
+    "pago: iniciar pedido pagado": {
+      "body": {
+        "error": "Este pedido ya está pagado.",
+        "reason": "already_paid"
+      },
+      "status": 409
+    },
+    "pago: aviso completado": {
+      "body": {
+        "received": true
+      },
+      "status": 200
+    },
+    "pago: aviso fallido": {
+      "body": {
+        "received": true
+      },
+      "status": 200
+    },
+    "pedidos: cambiar estado": {
+      "body": {
+        "createdAt": "<fecha>",
+        "customer_email": "ana@x.com",
+        "customer_name": "Ana",
+        "customer_phone": "600000000",
+        "customer_uid": "ana",
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-03",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": "near",
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "10:00",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 0,
+        "id": "o-paid",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000001",
+        "status": "delivered",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 35,
+        "updatedAt": "<fecha>"
+      },
+      "status": 200
+    },
+    "pedidos: cambiar estado inexistente": {
+      "body": {
+        "error": "Pedido no encontrado"
+      },
+      "status": 404
+    },
+    "pago: iniciar pedido entregado": {
+      "body": {
+        "error": "Este pedido ya está pagado.",
+        "reason": "already_paid"
+      },
+      "status": 409
+    },
+    "ruta: calcular": {
+      "body": {
+        "departure": "10:50",
+        "end": "11:10",
+        "origin": "Calle Origen 1, Madrid",
+        "stops": [
+          {
+            "address": "C/ Uno 1, Madrid (28001)",
+            "addressExtra": null,
+            "customer_name": "Luis",
+            "customer_phone": "600000000",
+            "eta": "11:00",
+            "id": "o-pend",
+            "lateMin": 0,
+            "legKm": 5,
+            "legMinutes": 10,
+            "status": "paid",
+            "timeSlot": "11:00",
+            "waitMin": 0
+          }
+        ],
+        "success": true,
+        "totalDistanceKm": 5,
+        "totalDrivingMinutes": 10,
+        "warnings": []
+      },
+      "status": 200
+    },
+    "ruta: pedido cancelado": {
+      "body": {
+        "message": "El pedido o-canc está cancelled y no puede entrar en una ruta.",
+        "success": false
+      },
+      "status": 400
+    },
+    "campaña: envío sin sesión": {
+      "body": {
+        "error": "No autorizado. Se requiere token Bearer."
+      },
+      "status": 401
+    },
+    "campaña: envío": {
+      "body": {
+        "message": "Error al procesar el envío masivo.",
+        "success": false
+      },
+      "status": 500
+    }
+  },
+  "tables": {
+    "Campaign": [
+      {
+        "content": "<p>Hola</p>",
+        "createdAt": "<fecha>",
+        "id": "camp-1",
+        "status": "draft",
+        "subject": "Novedades",
+        "title": "Otoño",
+        "updatedAt": "<fecha>"
+      }
+    ],
+    "Category": [
+      {
+        "createdAt": "<fecha>",
+        "description": null,
+        "id": "cat-2",
+        "isDefault": false,
+        "name": "Adicionales",
+        "order": 2
+      },
+      {
+        "createdAt": "<fecha>",
+        "description": "Cestas",
+        "id": "cat-1",
+        "isDefault": true,
+        "name": "Desayunos",
+        "order": 1
+      }
+    ],
+    "Configuration": [
+      {
+        "id": "disponibilidad",
+        "value": {
+          "blockingRules": {
+            "far": {
+              "afterMinutes": 90,
+              "beforeMinutes": 120
+            },
+            "medium": {
+              "afterMinutes": 60,
+              "beforeMinutes": 90
+            },
+            "near": {
+              "afterMinutes": 30,
+              "beforeMinutes": 60
+            }
+          },
+          "dailySlots": {
+            "2": [
+              {
+                "end": "13:00",
+                "start": "09:00"
+              }
+            ],
+            "3": [
+              {
+                "end": "13:00",
+                "start": "09:00"
+              }
+            ]
+          },
+          "deliveryDays": [
+            "2099-03-03",
+            "2099-03-04"
+          ],
+          "deliverySurcharges": {
+            "far": {
+              "amount": 0.5,
+              "type": "perKm"
+            },
+            "medium": {
+              "amount": 3,
+              "type": "fixed"
+            }
+          },
+          "maxDeliveryMinutes": 45,
+          "originAddress": "Calle Origen 1, Madrid",
+          "proximityThresholds": {
+            "mediumMaxMinutes": 30,
+            "nearMaxMinutes": 15
+          }
+        }
+      }
+    ],
+    "Offer": [
+      {
+        "active": true,
+        "backgroundColor": null,
+        "backgroundImage": null,
+        "badgeColor": null,
+        "code": "DIAMANTE10",
+        "codeColor": null,
+        "createdAt": "<fecha>",
+        "description": null,
+        "descriptionColor": null,
+        "discountBgColor": null,
+        "discountColor": null,
+        "discountCorner": false,
+        "discountPercent": 15,
+        "id": "of-2",
+        "imageUrl": null,
+        "productId": null,
+        "ribbonColor": null,
+        "ribbonText": null,
+        "ribbonTextColor": null,
+        "title": "Cupón 15",
+        "titleColor": null,
+        "type": "coupon",
+        "updatedAt": "<fecha>",
+        "validUntil": null
+      },
+      {
+        "active": true,
+        "backgroundColor": null,
+        "backgroundImage": null,
+        "badgeColor": null,
+        "code": null,
+        "codeColor": null,
+        "createdAt": "<fecha>",
+        "description": "Desc",
+        "descriptionColor": null,
+        "discountBgColor": null,
+        "discountColor": null,
+        "discountCorner": false,
+        "discountPercent": null,
+        "id": "<uuid>",
+        "imageUrl": null,
+        "productId": "p1",
+        "ribbonColor": "#e67e22",
+        "ribbonText": "¡Oferta!",
+        "ribbonTextColor": "#ffffff",
+        "title": "Nueva",
+        "titleColor": null,
+        "type": "product_deal",
+        "updatedAt": "<fecha>",
+        "validUntil": null
+      }
+    ],
+    "Order": [
+      {
+        "createdAt": "<fecha>",
+        "customer_email": "luis@x.com",
+        "customer_name": "Luis",
+        "customer_phone": "600111222",
+        "customer_uid": "luis",
+        "delivery_address": "C/ Dos, 7",
+        "delivery_addressExtra": "2º B",
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-03",
+        "delivery_distanceKm": 5,
+        "delivery_durationMin": 10,
+        "delivery_message": "Feliz día",
+        "delivery_proximity": "near",
+        "delivery_surchargeAmount": 0,
+        "delivery_timeSlot": "11:30",
+        "delivery_zip": "28002",
+        "failedPaymentAttempts": 0,
+        "id": "200000000001",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": null,
+        "status": "pending",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 40.5,
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "customer_email": "cliente@x.com",
+        "customer_name": "Cliente",
+        "customer_phone": "600000000",
+        "customer_uid": "ana",
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-04",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": null,
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "09:00",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 0,
+        "id": "o-canc",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000004",
+        "status": "cancelled",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 20,
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "customer_email": "cliente@x.com",
+        "customer_name": "Invitado",
+        "customer_phone": "600000000",
+        "customer_uid": null,
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-03",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": null,
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "12:30",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 1,
+        "id": "o-old",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000003",
+        "status": "failed",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 20,
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "customer_email": "ana@x.com",
+        "customer_name": "Ana",
+        "customer_phone": "600000000",
+        "customer_uid": "ana",
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-03",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": "near",
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "10:00",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 0,
+        "id": "o-paid",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000001",
+        "status": "delivered",
+        "stripePaymentIntent": null,
+        "stripeSessionId": null,
+        "total": 35,
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "customer_email": "luis@x.com",
+        "customer_name": "Luis",
+        "customer_phone": "600000000",
+        "customer_uid": "luis",
+        "delivery_address": "C/ Uno 1",
+        "delivery_addressExtra": null,
+        "delivery_addressOriginal": null,
+        "delivery_city": "Madrid",
+        "delivery_date": "2099-03-04",
+        "delivery_distanceKm": null,
+        "delivery_durationMin": null,
+        "delivery_message": null,
+        "delivery_proximity": null,
+        "delivery_surchargeAmount": null,
+        "delivery_timeSlot": "11:00",
+        "delivery_zip": "28001",
+        "failedPaymentAttempts": 0,
+        "id": "o-pend",
+        "lastStripeErrorId": null,
+        "paymentIssueEmailAt": null,
+        "redsysOrderId": "100000000002",
+        "status": "paid",
+        "stripePaymentIntent": "pi_1",
+        "stripeSessionId": "cs_test_1",
+        "total": 40.5,
+        "updatedAt": "<fecha>"
+      }
+    ],
+    "OrderItem": [
+      {
+        "name": "DESAYUNO CON DIAMANTES",
+        "orderId": "200000000001",
+        "price": 35,
+        "productId": "p1",
+        "quantity": 1
+      },
+      {
+        "name": "GLOBO",
+        "orderId": "200000000001",
+        "price": 5.5,
+        "productId": "p2",
+        "quantity": 1
+      },
+      {
+        "name": "DESAYUNO CON DIAMANTES",
+        "orderId": "o-paid",
+        "price": 35,
+        "productId": "p1",
+        "quantity": 1
+      },
+      {
+        "name": "DESAYUNO CON DIAMANTES",
+        "orderId": "o-pend",
+        "price": 35,
+        "productId": "p1",
+        "quantity": 1
+      },
+      {
+        "name": "GLOBO",
+        "orderId": "o-pend",
+        "price": 5.5,
+        "productId": "p2",
+        "quantity": 1
+      }
+    ],
+    "Product": [
+      {
+        "category": "Desayunos",
+        "createdAt": "<fecha>",
+        "description": "Cesta",
+        "id": "p1",
+        "local_image_path": "/uploads/p1.webp",
+        "name": "DESAYUNO CON DIAMANTES",
+        "price": 35,
+        "showOnHome": true,
+        "tipo": null,
+        "updatedAt": "<fecha>",
+        "url_origen": null
+      },
+      {
+        "category": "Adicionales",
+        "createdAt": "<fecha>",
+        "description": null,
+        "id": "p2",
+        "local_image_path": "http://localhost:3500/uploads/p2.webp",
+        "name": "GLOBO",
+        "price": 5.5,
+        "showOnHome": false,
+        "tipo": null,
+        "updatedAt": "<fecha>",
+        "url_origen": null
+      }
+    ],
+    "User": [
+      {
+        "createdAt": "<fecha>",
+        "displayName": "Admin",
+        "email": "admin@x.com",
+        "id": 1,
+        "password": "<hash>",
+        "photoURL": null,
+        "role": "admin",
+        "uid": "admin1",
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "displayName": "Ana",
+        "email": "ana@x.com",
+        "id": 2,
+        "password": "<hash>",
+        "photoURL": null,
+        "role": "cliente",
+        "uid": "ana",
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "displayName": "Luis",
+        "email": "luis@x.com",
+        "id": 3,
+        "password": null,
+        "photoURL": null,
+        "role": "cliente",
+        "uid": "luis",
+        "updatedAt": "<fecha>"
+      },
+      {
+        "createdAt": "<fecha>",
+        "displayName": "Nuevo",
+        "email": "nuevo@x.com",
+        "id": 4,
+        "password": "<hash>",
+        "photoURL": null,
+        "role": "cliente",
+        "uid": "<uuid>",
+        "updatedAt": "<fecha>"
+      }
+    ]
+  }
+}

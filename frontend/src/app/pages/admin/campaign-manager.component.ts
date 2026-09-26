@@ -143,7 +143,7 @@ import { ImageOptimizerService } from '../../services/image-optimizer.service';
                  <div class="email-preview-content">
                     <!-- Email Header -->
                     <div class="p-email-banner">
-                       <img src="assets/images/logo_transparent.png" alt="Logo" class="p-logo" />
+                       <img src="assets/images/logo_transparent.webp" alt="Logo" class="p-logo" />
                        <p class="p-banner-subtitle">Campaña Especial</p>
                     </div>
 

@@ -1,12 +1,11 @@
+// Prisma 7: el cliente no usa motor en Rust; se conecta con el adaptador MariaDB (src/config/prisma.js),
+// válido para MySQL (local) y MariaDB (producción). La URL de la base está en prisma.config.js.
 generator client {
-  provider      = "prisma-client-js"
-  engineType    = "binary"
-  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -79,6 +78,8 @@ model Order {
   status                String   @default("pending") // pending, paid, delivered, cancelled
   failedPaymentAttempts Int      @default(0)
   lastStripeErrorId     String?
+  // Cuándo se avisó al cliente de que el pago no se completó (el correo se envía una sola vez)
+  paymentIssueEmailAt   DateTime?
 
   items                 OrderItem[]
   user                  User?       @relation(fields: [customer_uid], references: [uid])
@@ -125,6 +126,14 @@ model Offer {
   ribbonText      String?
   ribbonColor     String?
   ribbonTextColor String?
+  // Colores de los textos de banners y cupones, y % de descuento como banda en la esquina
+  titleColor       String?
+  descriptionColor String?
+  badgeColor       String?
+  codeColor        String?
+  discountCorner   Boolean   @default(false)
+  discountColor    String?
+  discountBgColor  String?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -133,4 +142,10 @@ model Offer {
 model Configuration {
   id    String @id
   value Json
+}
+
+// Bloqueo por fecha de entrega para reservar horas sin solaparse (una fila por nombre, p. ej. "slot:2026-10-03").
+// Se bloquea la fila dentro de una transacción y el bloqueo se libera solo al terminar esta (src/config/prisma.js).
+model SlotLock {
+  name String @id
 }

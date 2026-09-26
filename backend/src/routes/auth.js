@@ -1,16 +1,17 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../config/prisma');
+const crypto = require('node:crypto');
+const { prisma, isUniqueViolation } = require('../config/prisma');
 const router = express.Router();
 
 const { JWT_SECRET } = require('../config/jwt');
 const { verifyFirebaseIdToken } = require('../services/googleIdToken');
 
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
+    const { email, password } = req.body || {};
+
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
         return res.status(400).json({ error: 'Email y contraseña son obligatorios' });
     }
 
@@ -41,14 +42,15 @@ router.post('/login', async (req, res) => {
             user: { uid: user.uid, email: user.email, displayName: user.displayName, role: user.role }
         });
     } catch (e) {
+        console.error('Error en /auth/login:', e);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
 router.post('/register', async (req, res) => {
-    const { email, password, displayName } = req.body;
+    const { email, password, displayName } = req.body || {};
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
         return res.status(400).json({ error: 'Email y contraseña son obligatorios' });
     }
 
@@ -59,11 +61,11 @@ router.post('/register', async (req, res) => {
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
-        // Generar un UUID simple para simular el UID de Firebase
-        const uid = require('crypto').randomUUID();
+        // Identificador propio del usuario (equivalente al UID de Firebase de los usuarios de Google)
+        const uid = crypto.randomUUID();
 
         const user = await prisma.user.create({
-            data: { uid, email, displayName, password: passwordHash, role: 'cliente' }
+            data: { uid, email, displayName: typeof displayName === 'string' ? displayName : null, password: passwordHash, role: 'cliente' }
         });
 
         const token = jwt.sign(
@@ -77,6 +79,9 @@ router.post('/register', async (req, res) => {
             user: { uid: user.uid, email: user.email, displayName: user.displayName, role: user.role }
         });
     } catch (e) {
+        // Dos registros simultáneos con el mismo email: la restricción única de la base decide
+        if (isUniqueViolation(e)) return res.status(400).json({ error: 'El email ya está registrado' });
+        console.error('Error en /auth/register:', e);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });

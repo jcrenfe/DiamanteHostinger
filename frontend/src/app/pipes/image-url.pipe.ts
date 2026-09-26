@@ -8,7 +8,7 @@ import { apiBaseUrl } from '../utils/api-base';
 })
 export class ImageUrlPipe implements PipeTransform {
   transform(path?: string): string {
-    if (!path) return 'assets/images/placeholder.jpg';
+    if (!path) return 'assets/images/placeholder.webp';
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }

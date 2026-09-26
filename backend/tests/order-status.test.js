@@ -1,16 +1,19 @@
-process.env.NO_LISTEN = '1';
-process.env.JWT_SECRET = 'test-secret';
+// Estado público de un pedido (base de datos real de pruebas).
+require('./helpers/env');
+const { src } = require('./helpers/stubs');
+const db = require('./helpers/db');
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
-const src = (...p) => path.resolve(__dirname, '..', 'src', ...p);
-const orders = [{ id: '123456789012', status: 'paid', customer_name: 'Ana', customer_email: 'ana@x.com', delivery_address: 'Calle Secreta 1' }];
-require.cache[src('config', 'prisma.js')] = { id: 'p', filename: src('config', 'prisma.js'), loaded: true, children: [], paths: [],
-    exports: { order: { findUnique: async ({ where }) => orders.find(o => o.id === where.id) || null, findMany: async () => orders } } };
+
 const app = require(src('app.js'));
 let server, base;
-test.before(async () => { await new Promise(r => { server = app.listen(0, r); }); base = `http://127.0.0.1:${server.address().port}/api/orders`; });
-test.after(() => server.close());
+test.before(async () => {
+    await new Promise(r => { server = app.listen(0, r); });
+    base = `http://127.0.0.1:${server.address().port}/api/orders`;
+    await db.reset();
+    await db.insertOrders([{ id: '123456789012', status: 'paid', customer_name: 'Ana', customer_email: 'ana@x.com', delivery_address: 'Calle Secreta 1' }]);
+});
+test.after(async () => { server.close(); await db.client.$disconnect(); });
 
 test('el estado de un pedido es público (sin sesión) y solo devuelve el estado, nunca datos personales', async () => {
     const res = await fetch(`${base}/123456789012/status`);

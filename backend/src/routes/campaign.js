@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { verifyToken, isAdmin } = require('../middleware/auth');
 const nodemailer = require('nodemailer');
-const prisma = require('../config/prisma');
+const { prisma } = require('../config/prisma');
 
 // Configure Nodemailer (reusing same config as contact.js ideally via a shared utility, 
 // but for target simplicity we'll redefine or just use process.env)
@@ -62,7 +63,8 @@ const getEmailTemplate = (header, summary, message, cta, image) => `
 </html>
 `;
 
-router.post('/send-bulk', async (req, res) => {
+// Solo administradores: envía correos masivos con la cuenta SMTP de la tienda.
+router.post('/send-bulk', verifyToken, isAdmin, async (req, res) => {
     const { campaignId, header, summary, message, cta, image, recipients } = req.body;
 
     if (!recipients || recipients.length === 0) {

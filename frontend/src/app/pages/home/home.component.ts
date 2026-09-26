@@ -94,7 +94,7 @@ import { RouterLink } from '@angular/router';
    styles: [`
     .hero {
       background: linear-gradient(rgba(139, 69, 19, 0.4), rgba(230, 126, 34, 0.2)), 
-                  url('/assets/images/desayuno_con_diamantes.png');
+                  url('/assets/images/desayuno_con_diamantes.webp');
       background-size: cover;
       background-position: center;
       height: 60vh;
@@ -205,7 +205,7 @@ import { RouterLink } from '@angular/router';
        height: 400px;
        border-radius: var(--radius-lg);
        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-       background-image: url('/assets/images/familia-tradicion.png');
+       background-image: url('/assets/images/familia-tradicion.webp');
        background-size: cover;
        background-position: center;
     }

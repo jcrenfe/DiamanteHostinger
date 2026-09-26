@@ -1,5 +1,5 @@
 const axios = require('axios');
-const prisma = require('../config/prisma');
+const { prisma } = require('../config/prisma');
 
 const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const DEFAULT_MAX_DELIVERY_MINUTES = 60;
